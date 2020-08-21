@@ -4,8 +4,8 @@ import cv2
 
 
 def main():
-    parser = argparse.ArgumentParser("Validation/Train splitting")
-    parser.add_argument('data_path', help='Path to the train dataset')
+    parser = argparse.ArgumentParser("Displays a video frame by frame")
+    parser.add_argument('data_path', help='Path to the video')
     args = parser.parse_args()
 
     cap = cv2.VideoCapture(args.data_path)

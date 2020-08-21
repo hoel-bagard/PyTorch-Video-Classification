@@ -5,16 +5,12 @@ import shutil
 import time
 
 import torch
-import torchvision
+import torchvision.transforms as transforms
 from torchsummary import summary
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
-from src.dataset.transforms import (
-    Normalize,
-    ToTensor
-)
 from src.networks.network import Network
 from src.train import train
 
@@ -52,9 +48,12 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
-                            transform=torchvision.transforms.Compose([
-                                # Normalize(),
-                                ToTensor()
+                            transform=transforms.Compose([
+                                transforms.Resize((ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE)),
+                                transforms.Grayscale(),
+                                # transforms.RandomHorizontalFlip(),   # needs to be same flip for whole video
+                                transforms.ToTensor(),
+                                transforms.Normalize((0.5, ), (0.5, ))
                             ]))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                    shuffle=True, num_workers=ModelConfig.WORKERS)
@@ -62,9 +61,12 @@ def main():
     print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
 
     val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
-                          transform=torchvision.transforms.Compose([
-                              # Normalize(),
-                              ToTensor()
+                          transform=transforms.Compose([
+                              transforms.Resize((ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE)),
+                              transforms.Grayscale(),
+                              # transforms.RandomHorizontalFlip(),
+                              transforms.ToTensor(),
+                              transforms.Normalize((0.5, ), (0.5, ))
                           ]))
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                  shuffle=False, num_workers=ModelConfig.WORKERS)
@@ -76,7 +78,7 @@ def main():
     model = Network()
     model = model.float()
     model.to(device)
-    summary(model, (ModelConfig.VIDEO_SIZE, 3, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE))
+    # summary(model, (ModelConfig.VIDEO_SIZE, 1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE))
 
     train(model, train_dataloader, val_dataloader)
 

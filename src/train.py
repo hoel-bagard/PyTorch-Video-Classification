@@ -5,23 +5,23 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ExponentialLR
-import numpy as np
+# import numpy as np
 
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
 from src.utils.trainer import Trainer
-from src.utils.draw import draw_pred
-from src.utils.accuracy import get_accuracy
+# from src.utils.draw import draw_pred
+# from src.utils.accuracy import get_accuracy
 
 
 def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.NLLLoss()  # nn.CrossEntropyLoss()
     trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader)
     scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
     tb_writer = SummaryWriter(DataConfig.TB_DIR)
     tb_writer.add_graph(model, (torch.empty(1, ModelConfig.VIDEO_SIZE,
-                                            3, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE, device=device), ))
+                                            1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE, device=device), ))
     tb_writer.flush()
 
     best_loss = 1000
@@ -78,7 +78,7 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
         #             out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
         #             tb_writer.add_image(f"Validation/prediction_{image_index}", out_img, global_step=epoch)
 
-            print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s", flush=1)
+        #     print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s", flush=1)
         scheduler.step()
 
     print("Finished Training")

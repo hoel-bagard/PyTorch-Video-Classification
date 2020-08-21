@@ -5,6 +5,7 @@ import random
 import torch
 import cv2
 import numpy as np
+from PIL import Image
 
 from config.model_config import ModelConfig
 
@@ -26,7 +27,7 @@ class Dataset(torch.utils.data.Dataset):
 
         # Build a map between id and names
         self.label_map = {}
-        with open(os.path.join(data_path, "..", "class.names")) as table_file:
+        with open(os.path.join(data_path, "..", "classes.names")) as table_file:
             for key, line in enumerate(table_file):
                 label = line.strip()
                 self.label_map[key] = label
@@ -55,15 +56,14 @@ class Dataset(torch.utils.data.Dataset):
         for _ in range(self.video_size):
             _, frame = cap.read()
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            frame = Image.fromarray(frame)
+            if self.transform:
+                frame = self.transform(frame)
+                frame = frame.unsqueeze(0)
             video.append(frame)
 
         cap.release()
-        video = np.asarray(video)
-
-        label = self.labels[i, 1].astype(np.uint8)
+        video = torch.cat(video, 0)
+        label = torch.from_numpy(np.asarray(self.labels[i, 1], dtype=np.uint8))
         sample = {'video': video, 'label': label}
-
-        if self.transform:
-            sample = self.transform(sample)
-
         return sample

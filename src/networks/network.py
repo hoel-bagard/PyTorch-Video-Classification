@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from src.networks.layers import (
     DarknetConv,
@@ -10,16 +11,15 @@ from src.networks.layers import (
 from config.model_config import ModelConfig
 
 
-class Network(nn.Module):
+class CNN(nn.Module):
     def __init__(self):
-        super(Network, self).__init__()
-        self.output_size = 2
+        super(CNN, self).__init__()
         channels = ModelConfig.CHANNELS
 
-        self.first_conv = DarknetConv(3, ModelConfig.CHANNELS[0], 3)
+        self.first_conv = DarknetConv(1, ModelConfig.CHANNELS[0], 3)
         self.blocks = nn.Sequential(*[DarknetBlock(channels[i-1], channels[i], ModelConfig.NB_BLOCKS[i-1])
                                       for i in range(1, len(channels))])
-        self.last_conv = nn.Conv2d(ModelConfig.CHANNELS[-1], self.output_size, 6, bias=False)
+        # self.last_conv = nn.Conv2d(ModelConfig.CHANNELS[-1], self.output_size, 6, bias=False)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -30,16 +30,24 @@ class Network(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, inputs):
-
-        # Use conv3D with 1 for the kernel depth ?
-        inputs = torch.transpose(inputs, 0, 1)  # Swaps seq_len and batch
-        for seq_element in inputs:
-            x = self.first_conv(inputs)
-            for block in self.blocks:
-                x = block(x)
-            x = self.last_conv(x)
-            x = torch.flatten(x, start_dim=1)
-
-        # LSTM here
-
+        x = self.first_conv(inputs)
+        for block in self.blocks:
+            x = block(x)
+        # x = self.last_conv(x)
         return x
+
+
+class Network(nn.Module):
+    def __init__(self, nb_classes: int = 2):
+        super(Network, self).__init__()
+        self.output_size = nb_classes
+        self.cnn = CNN()
+        self.lstm = nn.LSTM(288, self.output_size, 5, batch_first=True)
+
+    def forward(self, inputs):
+        batch_size, timesteps, C, H, W = inputs.size()
+        x = inputs.view(batch_size * timesteps, C, H, W)
+        x = self.cnn(x)
+        x = x.view(batch_size, timesteps, -1)
+        x, _ = self.lstm(x)
+        return F.log_softmax(x, dim=1)
