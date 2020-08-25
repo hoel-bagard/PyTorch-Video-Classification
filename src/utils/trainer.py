@@ -37,7 +37,6 @@ class Trainer:
             labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
             outputs = outputs.permute((0, 2, 1))
 
-
             loss = self.loss_fn(outputs, labels)
             loss.backward()
             self.optimizer.step()
@@ -57,6 +56,14 @@ class Trainer:
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
 
             outputs = self.model(inputs)
+
+            # HOTFIX
+            labels = labels.unsqueeze(-1)
+            labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
+            outputs = outputs.permute((0, 2, 1))
+
+
+
             loss = self.loss_fn(outputs, labels)
 
             epoch_progress = int(30 * (step/self.val_steps_per_epoch))

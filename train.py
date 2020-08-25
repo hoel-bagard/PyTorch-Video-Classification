@@ -78,6 +78,7 @@ def main():
     model = Network()
     model = model.float()
     model.to(device)
+    # The summary does not work with an LSTM for some reason
     # summary(model, (ModelConfig.VIDEO_SIZE, 1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE))
 
     train(model, train_dataloader, val_dataloader)

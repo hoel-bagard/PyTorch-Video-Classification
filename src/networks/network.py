@@ -43,6 +43,7 @@ class Network(nn.Module):
         self.output_size = nb_classes
         self.cnn = CNN()
         self.lstm = nn.LSTM(288, self.output_size, 5, batch_first=True)
+        # self.dense = nn.Linear(288, self.output_size)
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
@@ -50,4 +51,5 @@ class Network(nn.Module):
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
         x, _ = self.lstm(x)
-        return F.log_softmax(x, dim=1)
+        # x = self.dense(x)
+        return F.log_softmax(x, dim=-1)
