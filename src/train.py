@@ -20,8 +20,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
     trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader)
     scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
     tb_writer = SummaryWriter(DataConfig.TB_DIR)
-    tb_writer.add_graph(model, (torch.empty(1, ModelConfig.VIDEO_SIZE,
-                                            1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE, device=device), ))
+    # tb_writer.add_graph(model, (torch.empty(1, ModelConfig.VIDEO_SIZE,
+    #                                         1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE, device=device), ))
     tb_writer.flush()
 
     best_loss = 1000
@@ -48,37 +48,41 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
 
         # Validation and other metrics
         if epoch % DataConfig.VAL_FREQ == 0 and epoch >= DataConfig.RECORD_START:
-            validation_start_time = time.time()
-            epoch_loss = trainer.val_epoch()
+            with torch.no_grad():
+                validation_start_time = time.time()
+                epoch_loss = trainer.val_epoch()
 
-            if DataConfig.USE_TB:
-                tb_writer.add_scalar('Validation loss', epoch_loss, epoch)
+                if DataConfig.USE_TB:
+                    tb_writer.add_scalar('Validation loss', epoch_loss, epoch)
 
-                # Metrics for the Train dataset
-                batch = next(iter(train_dataloader))
-                video, labels = batch["video"].float(), batch["label"]  # [:1]
-                predictions = model(video.to(device))
-                predictions = torch.nn.functional.softmax(predictions, dim=-1)
-                train_acc = get_accuracy(labels, predictions.cpu())
-                tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
-                # out_imgs = draw_pred(in_imgs, predictions, labels)
-                # for image_index, out_img in enumerate(out_imgs):
-                #     out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
-                #     tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
+                    # Metrics for the Train dataset
+                    batch = next(iter(train_dataloader))
+                    video, labels = batch["video"].float(), batch["label"]
+                    model.reset_lstm_state(video.shape[0])
+                    predictions = model(video.to(device))
+                    predictions = torch.nn.functional.softmax(predictions, dim=-1)
+                    train_acc = get_accuracy(labels, predictions.cpu())
+                    tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
+                    # out_imgs = draw_pred(in_imgs, predictions, labels)
+                    # for image_index, out_img in enumerate(out_imgs):
+                    #     out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+                    #     tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
 
-                # Metrics for the Validation dataset
-                batch = next(iter(val_dataloader))
-                video, labels = batch["video"].float(), batch["label"]
-                predictions = model(video.to(device))
-                predictions = torch.nn.functional.softmax(predictions, dim=-1)
-                val_acc = get_accuracy(labels, predictions.cpu())
-                tb_writer.add_scalar("Validation Accuracy", val_acc, epoch)
-                # out_imgs = draw_pred(in_imgs, predictions, labels)
-                # for image_index, out_img in enumerate(out_imgs):
-                #     out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
-                #     tb_writer.add_image(f"Validation/prediction_{image_index}", out_img, global_step=epoch)
+                    # Metrics for the Validation dataset
+                    batch = next(iter(val_dataloader))
+                    video, labels = batch["video"].float(), batch["label"]
+                    model.reset_lstm_state(video.shape[0])
+                    predictions = model(video.to(device))
+                    predictions = torch.nn.functional.softmax(predictions, dim=-1)
+                    val_acc = get_accuracy(labels, predictions.cpu())
+                    tb_writer.add_scalar("Validation Accuracy", val_acc, epoch)
+                    # out_imgs = draw_pred(in_imgs, predictions, labels)
+                    # for image_index, out_img in enumerate(out_imgs):
+                    #     out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+                    #     tb_writer.add_image(f"Validation/prediction_{image_index}", out_img, global_step=epoch)
+                    print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}", end='\r', flush=True)
 
-            print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s", flush=1)
+                print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s", flush=1)
         scheduler.step()
 
     print("Finished Training")

@@ -19,7 +19,6 @@ class CNN(nn.Module):
         self.first_conv = DarknetConv(1, ModelConfig.CHANNELS[0], 3)
         self.blocks = nn.Sequential(*[DarknetBlock(channels[i-1], channels[i], ModelConfig.NB_BLOCKS[i-1])
                                       for i in range(1, len(channels))])
-        # self.last_conv = nn.Conv2d(ModelConfig.CHANNELS[-1], self.output_size, 6, bias=False)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -33,23 +32,47 @@ class CNN(nn.Module):
         x = self.first_conv(inputs)
         for block in self.blocks:
             x = block(x)
-        # x = self.last_conv(x)
         return x
 
 
-class Network(nn.Module):
-    def __init__(self, nb_classes: int = 2):
-        super(Network, self).__init__()
-        self.output_size = nb_classes
+class LRCN(nn.Module):
+    def __init__(self, nb_classes: int = 2, hidden_size: int = 60, num_layers: int = 5):
+        super(LRCN, self).__init__()
         self.cnn = CNN()
-        self.lstm = nn.LSTM(288, self.output_size, 5, batch_first=True)
-        # self.dense = nn.Linear(288, self.output_size)
+
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.num_layers = num_layers
+        self.hidden_size: int = hidden_size
+
+        self.hidden_cell = (torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device),
+                            torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device))
+        self.lstm = nn.LSTM(288, hidden_size, num_layers, batch_first=True)
+        self.dense = nn.Linear(hidden_size, nb_classes)
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
         x = inputs.view(batch_size * timesteps, C, H, W)
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
-        x, _ = self.lstm(x)
-        # x = self.dense(x)
+        # print(f"Before lstm: {x.shape}")
+        x, self.hidden_cell = self.lstm(x, self.hidden_cell)
+        # print(f"After lstm: {x.shape}")
+        x = x[:, -1]
+        # print(f"Before dence: {x.shape}")
+        x = self.dense(x)
+        # print(f"After dence: {x.shape}")
+
         return F.log_softmax(x, dim=-1)
+
+    def reset_lstm_state(self, batch_size: int = ModelConfig.BATCH_SIZE):
+        """
+        Args:
+            batch_size: Needs to be the same as the size of the next batch.
+                        Can be smaller if the last batch does not have enough elements.
+        """
+        # Debug. Slows down training.
+        # del self.hidden_cell
+        # torch.cuda.empty_cache()
+
+        self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device),
+                            torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device))

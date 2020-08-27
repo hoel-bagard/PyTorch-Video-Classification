@@ -1,15 +1,15 @@
 import time
 
 import torch
-import torch.nn as nn
 
 from config.model_config import ModelConfig
+from src.networks.network import LRCN
 
 
 class Trainer:
-    def __init__(self, model: nn.Module, loss_fn,
+    def __init__(self, model: LRCN, loss_fn,
                  train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader):
-        self.model = model
+        self.model: LRCN = model
         self.loss_fn = loss_fn
         self.optimizer: torch.optim.Optimizer = torch.optim.Adam(model.parameters(),
                                                                  lr=ModelConfig.LR, weight_decay=ModelConfig.REG_FACTOR)
@@ -28,14 +28,14 @@ class Trainer:
             self.optimizer.zero_grad()
 
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
+            self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
 
-
-            # HOTFIX
-            labels = labels.unsqueeze(-1)
-            labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
-            outputs = outputs.permute((0, 2, 1))
+            # If predicting for every frame
+            # labels = labels.unsqueeze(-1)
+            # labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
+            # outputs = outputs.permute((0, 2, 1))
 
             loss = self.loss_fn(outputs, labels)
             loss.backward()
@@ -53,14 +53,16 @@ class Trainer:
         epoch_loss = 0.0
         for step, batch in enumerate(self.val_dataloader, start=1):
             step_start_time = time.time()
+
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
+            self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
 
-            # HOTFIX
-            labels = labels.unsqueeze(-1)
-            labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
-            outputs = outputs.permute((0, 2, 1))
+            # If predicting for every frame
+            # labels = labels.unsqueeze(-1)
+            # labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
+            # outputs = outputs.permute((0, 2, 1))
 
 
 

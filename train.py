@@ -11,7 +11,7 @@ from torchsummary import summary
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
-from src.networks.network import Network
+from src.networks.network import LRCN
 from src.train import train
 
 
@@ -75,7 +75,7 @@ def main():
     print(f"\nLoaded {len(train_dataloader.dataset)} train data and",
           f"{len(val_dataloader.dataset)} validation data", flush=True)
 
-    model = Network()
+    model = LRCN()
     model = model.float()
     model.to(device)
     # The summary does not work with an LSTM for some reason
