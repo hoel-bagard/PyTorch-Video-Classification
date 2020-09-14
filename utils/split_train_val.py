@@ -22,10 +22,10 @@ def main():
     for key in range(len(label_map)):
         os.makedirs(os.path.join(val_path, label_map[key]))
         file_list = glob.glob(os.path.join(args.data_path, label_map[key], "*.avi"))
-        nb_imgs = len(file_list)
+        nb_files = len(file_list)
         for i, file_path in enumerate(file_list):
-            print(f"Processing image {os.path.basename(file_path)} ({i+1}/{nb_imgs})", end='\r')
-            if i >= 0.85*nb_imgs:
+            print(f"Processing image {os.path.basename(file_path)} ({i+1}/{nb_files})", end='\r')
+            if i >= 0.85*nb_files:
                 shutil.move(file_path, os.path.join(val_path, label_map[key], os.path.basename(file_path)))
         print(f"Finished splitting {label_map[key]}"
               + ' ' * (os.get_terminal_size().columns-len("Finished splitting {label_map[key]}")))

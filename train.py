@@ -12,6 +12,7 @@ from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
 from src.networks.network import LRCN
+from src.networks.transformer_model import Transformer
 from src.train import train
 
 
@@ -49,7 +50,7 @@ def main():
 
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
                             transform=transforms.Compose([
-                                transforms.Resize((ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE)),
+                                transforms.Resize(ModelConfig.IMAGE_SIZES),
                                 transforms.Grayscale(),
                                 # transforms.RandomHorizontalFlip(),   # needs to be same flip for whole video
                                 transforms.ToTensor(),
@@ -62,7 +63,7 @@ def main():
 
     val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
                           transform=transforms.Compose([
-                              transforms.Resize((ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE)),
+                              transforms.Resize(ModelConfig.IMAGE_SIZES),
                               transforms.Grayscale(),
                               # transforms.RandomHorizontalFlip(),
                               transforms.ToTensor(),
@@ -75,7 +76,10 @@ def main():
     print(f"\nLoaded {len(train_dataloader.dataset)} train data and",
           f"{len(val_dataloader.dataset)} validation data", flush=True)
 
-    model = LRCN()
+    if ModelConfig.MODEL == "LRCN":
+        model = LRCN(nb_classes=ModelConfig.OUTPUT_CLASSES)
+    elif ModelConfig.MODEL == "Transformer":
+        model = Transformer(nb_classes=ModelConfig.OUTPUT_CLASSES)
     model = model.float()
     model.to(device)
     # The summary does not work with an LSTM for some reason

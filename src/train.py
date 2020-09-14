@@ -58,7 +58,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                     # Metrics for the Train dataset
                     batch = next(iter(train_dataloader))
                     video, labels = batch["video"].float(), batch["label"]
-                    model.reset_lstm_state(video.shape[0])
+                    if ModelConfig.MODEL == "LRCN":
+                        model.reset_lstm_state(video.shape[0])
                     predictions = model(video.to(device))
                     predictions = torch.nn.functional.softmax(predictions, dim=-1)
                     train_acc = get_accuracy(labels, predictions.cpu())
@@ -71,7 +72,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                     # Metrics for the Validation dataset
                     batch = next(iter(val_dataloader))
                     video, labels = batch["video"].float(), batch["label"]
-                    model.reset_lstm_state(video.shape[0])
+                    if ModelConfig.MODEL == "LRCN":
+                        model.reset_lstm_state(video.shape[0])
                     predictions = model(video.to(device))
                     predictions = torch.nn.functional.softmax(predictions, dim=-1)
                     val_acc = get_accuracy(labels, predictions.cpu())

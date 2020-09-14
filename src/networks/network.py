@@ -46,7 +46,7 @@ class LRCN(nn.Module):
 
         self.hidden_cell = (torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device),
                             torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device))
-        self.lstm = nn.LSTM(288, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(576, hidden_size, num_layers, batch_first=True)
         self.dense = nn.Linear(hidden_size, nb_classes)
 
     def forward(self, inputs):
@@ -54,13 +54,9 @@ class LRCN(nn.Module):
         x = inputs.view(batch_size * timesteps, C, H, W)
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
-        # print(f"Before lstm: {x.shape}")
         x, self.hidden_cell = self.lstm(x, self.hidden_cell)
-        # print(f"After lstm: {x.shape}")
         x = x[:, -1]
-        # print(f"Before dence: {x.shape}")
         x = self.dense(x)
-        # print(f"After dence: {x.shape}")
 
         return F.log_softmax(x, dim=-1)
 

@@ -28,7 +28,8 @@ class Trainer:
             self.optimizer.zero_grad()
 
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
-            self.model.reset_lstm_state(inputs.shape[0])
+            if ModelConfig.MODEL == "LRCN":
+                self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
 
@@ -55,7 +56,8 @@ class Trainer:
             step_start_time = time.time()
 
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
-            self.model.reset_lstm_state(inputs.shape[0])
+            if ModelConfig.MODEL == "LRCN":
+                self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
 

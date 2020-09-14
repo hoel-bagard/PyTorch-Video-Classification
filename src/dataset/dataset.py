@@ -50,7 +50,7 @@ class Dataset(torch.utils.data.Dataset):
         cap = cv2.VideoCapture(self.labels[i, 0])
 
         frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, random.randint(0, frame_count-1 - self.video_size))
+        cap.set(cv2.CAP_PROP_POS_FRAMES, random.randint(0, frame_count-2 - self.video_size))
 
         video = []
         for _ in range(self.video_size):
@@ -59,6 +59,7 @@ class Dataset(torch.utils.data.Dataset):
             frame = Image.fromarray(frame)
             if self.transform:
                 frame = self.transform(frame)
+                # To keep a channel dimension (gray scale)
                 frame = frame.unsqueeze(0)
             video.append(frame)
 
