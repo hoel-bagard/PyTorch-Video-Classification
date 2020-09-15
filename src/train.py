@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ExponentialLR
-# import numpy as np
+import numpy as np
 
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
@@ -20,8 +20,11 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
     trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader)
     scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
     tb_writer = SummaryWriter(DataConfig.TB_DIR)
-    # tb_writer.add_graph(model, (torch.empty(1, ModelConfig.VIDEO_SIZE,
-    #                                         1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE, device=device), ))
+    if ModelConfig.MODEL != "LRCN":
+        tb_writer.add_graph(model, (torch.empty(ModelConfig.BATCH_SIZE, ModelConfig.VIDEO_SIZE,
+                                                1 if ModelConfig.USE_GRAY_SCALE else 3,
+                                                ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1],
+                                                device=device), ))
     tb_writer.flush()
 
     best_loss = 1000
@@ -57,17 +60,20 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
 
                     # Metrics for the Train dataset
                     batch = next(iter(train_dataloader))
-                    video, labels = batch["video"].float(), batch["label"]
+                    videos, labels = batch["video"].float(), batch["label"]
                     if ModelConfig.MODEL == "LRCN":
-                        model.reset_lstm_state(video.shape[0])
-                    predictions = model(video.to(device))
+                        model.reset_lstm_state(videos.shape[0])
+                    predictions = model(videos.to(device))
                     predictions = torch.nn.functional.softmax(predictions, dim=-1)
                     train_acc = get_accuracy(labels, predictions.cpu())
                     tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
-                    # out_imgs = draw_pred(in_imgs, predictions, labels)
-                    # for image_index, out_img in enumerate(out_imgs):
-                    #     out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
-                    #     tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
+                    out_imgs = draw_pred(videos, predictions, labels)
+                    for image_index, out_img in enumerate(out_imgs):
+                        if ModelConfig.USE_GRAY_SCALE:
+                            out_img = np.expand_dims(out_img, 0)
+                        else:
+                            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+                        tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
 
                     # Metrics for the Validation dataset
                     batch = next(iter(val_dataloader))

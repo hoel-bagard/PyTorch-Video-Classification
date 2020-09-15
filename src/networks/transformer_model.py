@@ -31,7 +31,7 @@ class CNN(nn.Module):
         sizes = ModelConfig.SIZES
         strides = ModelConfig.STRIDES
 
-        self.first_conv = DarknetConv(1, channels[0], sizes[0], stride=strides[0])
+        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0])
         self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i])
                                       for i in range(1, len(channels))])
 

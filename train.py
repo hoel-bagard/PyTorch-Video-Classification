@@ -51,10 +51,10 @@ def main():
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
                             transform=transforms.Compose([
                                 transforms.Resize(ModelConfig.IMAGE_SIZES),
-                                transforms.Grayscale(),
+                                # transforms.Grayscale(),
                                 # transforms.RandomHorizontalFlip(),   # needs to be same flip for whole video
                                 transforms.ToTensor(),
-                                transforms.Normalize((0.5, ), (0.5, ))
+                                # transforms.Normalize((0.5, ), (0.5, ))
                             ]))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                    shuffle=True, num_workers=ModelConfig.WORKERS)
@@ -64,10 +64,8 @@ def main():
     val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
                           transform=transforms.Compose([
                               transforms.Resize(ModelConfig.IMAGE_SIZES),
-                              transforms.Grayscale(),
-                              # transforms.RandomHorizontalFlip(),
                               transforms.ToTensor(),
-                              transforms.Normalize((0.5, ), (0.5, ))
+                              # transforms.Normalize((0.5, ), (0.5, ))
                           ]))
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                  shuffle=False, num_workers=ModelConfig.WORKERS)
@@ -83,7 +81,9 @@ def main():
     model = model.float()
     model.to(device)
     # The summary does not work with an LSTM for some reason
-    # summary(model, (ModelConfig.VIDEO_SIZE, 1, ModelConfig.IMAGE_SIZE, ModelConfig.IMAGE_SIZE))
+    if ModelConfig.MODEL != "LRCN":
+        summary(model, (ModelConfig.VIDEO_SIZE, 1 if ModelConfig.USE_GRAY_SCALE else 3,
+                        ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1]))
 
     train(model, train_dataloader, val_dataloader)
 

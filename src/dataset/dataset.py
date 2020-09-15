@@ -50,21 +50,36 @@ class Dataset(torch.utils.data.Dataset):
         cap = cv2.VideoCapture(self.labels[i, 0])
 
         frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, random.randint(0, frame_count-2 - self.video_size))
+        start = random.randint(0, frame_count-2 - self.video_size)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, start)
 
         video = []
-        for _ in range(self.video_size):
+        for j in range(self.video_size):
             _, frame = cap.read()
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            try:
+                if ModelConfig.USE_GRAY_SCALE:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                else:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            except:  # frame is None for some reason
+                print(f"\nFrame was none: {frame}, video: {self.labels[i, 0]}")
+                print(f"Frame count was: {frame_count}, batch frame: {j}")
+                print(f"Frame: {cap.get(cv2.CAP_PROP_POS_FRAMES), start: {start}}")
+                frame = np.zeros(ModelConfig.IMAGE_SIZES, np.uint8)
             frame = Image.fromarray(frame)
             if self.transform:
                 frame = self.transform(frame)
-                # To keep a channel dimension (gray scale)
+            # To keep a channel dimension (gray scale)
+            if ModelConfig.USE_GRAY_SCALE:
                 frame = frame.unsqueeze(0)
             video.append(frame)
 
         cap.release()
-        video = torch.cat(video, 0)
+        if ModelConfig.USE_GRAY_SCALE:
+            video = torch.cat(video, 0)
+        else:
+            video = torch.stack(video, dim=0)
+
         label = torch.from_numpy(np.asarray(self.labels[i, 1], dtype=np.uint8))
         sample = {'video': video, 'label': label}
         return sample
