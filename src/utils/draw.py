@@ -36,7 +36,15 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
     for img, preds, label in zip(imgs, predictions, labels):
         img = np.asarray(img * 255.0, dtype=np.uint8)
         img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-        preds = str([round(float(conf), 2) for conf in preds]) + f"  ==> {np.argmax(preds)}"
+
+        # If there are too many classes, just print the top 3 ones
+        if len(preds) > 5:
+            # Gets indices of top 3 pred
+            idx = np.argpartition(preds, -3)[-3:]
+            idx = idx[np.argsort(preds[idx])][::-1]
+            preds = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
+        else:
+            preds = str([round(float(conf), 2) for conf in preds]) + f"  ==> {np.argmax(preds)}"
 
         img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),

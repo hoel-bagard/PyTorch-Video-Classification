@@ -16,7 +16,7 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         channels = ModelConfig.CHANNELS
 
-        self.first_conv = DarknetConv(1, ModelConfig.CHANNELS[0], 3)
+        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, ModelConfig.CHANNELS[0], 3)
         self.blocks = nn.Sequential(*[DarknetBlock(channels[i-1], channels[i], ModelConfig.NB_BLOCKS[i-1])
                                       for i in range(1, len(channels))])
 

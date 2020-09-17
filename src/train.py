@@ -60,13 +60,16 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
 
                     # Metrics for the Train dataset
                     batch = next(iter(train_dataloader))
-                    videos, labels = batch["video"].float(), batch["label"]
                     if ModelConfig.MODEL == "LRCN":
+                        # LSTM needs proper batches (the pytorch implementation at least)
+                        videos, labels = batch["video"].float(), batch["label"][:4]
                         model.reset_lstm_state(videos.shape[0])
+                    else:
+                        videos, labels = batch["video"][:4].float(), batch["label"][:4]
                     predictions = model(videos.to(device))
+                    if ModelConfig.MODEL == "LRCN":
+                        predictions, videos = predictions[:4], videos[:4]
                     predictions = torch.nn.functional.softmax(predictions, dim=-1)
-                    train_acc = get_accuracy(labels, predictions.cpu())
-                    tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
                     out_imgs = draw_pred(videos, predictions, labels)
                     for image_index, out_img in enumerate(out_imgs):
                         if ModelConfig.USE_GRAY_SCALE:
@@ -74,20 +77,30 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                         else:
                             out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
                         tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
+                    train_acc = get_accuracy(model, train_dataloader)
+                    tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
 
                     # Metrics for the Validation dataset
                     batch = next(iter(val_dataloader))
-                    video, labels = batch["video"].float(), batch["label"]
                     if ModelConfig.MODEL == "LRCN":
-                        model.reset_lstm_state(video.shape[0])
-                    predictions = model(video.to(device))
+                        videos, labels = batch["video"].float(), batch["label"][:4]
+                        model.reset_lstm_state(videos.shape[0])
+                    else:
+                        videos, labels = batch["video"][:4].float(), batch["label"][:4]
+                    predictions = model(videos.to(device))
+                    if ModelConfig.MODEL == "LRCN":
+                        predictions, videos = predictions[:4], videos[:4]
                     predictions = torch.nn.functional.softmax(predictions, dim=-1)
-                    val_acc = get_accuracy(labels, predictions.cpu())
+                    out_imgs = draw_pred(videos, predictions, labels)
+                    for image_index, out_img in enumerate(out_imgs):
+                        if ModelConfig.USE_GRAY_SCALE:
+                            out_img = np.expand_dims(out_img, 0)
+                        else:
+                            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+                        tb_writer.add_image(f"Validation/prediction_{image_index}", out_img, global_step=epoch)
+                    val_acc = get_accuracy(model, val_dataloader)
                     tb_writer.add_scalar("Validation Accuracy", val_acc, epoch)
-                    # out_imgs = draw_pred(in_imgs, predictions, labels)
-                    # for image_index, out_img in enumerate(out_imgs):
-                    #     out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
-                    #     tb_writer.add_image(f"Validation/prediction_{image_index}", out_img, global_step=epoch)
+
                     print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}", end='\r', flush=True)
 
                 print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s", flush=1)

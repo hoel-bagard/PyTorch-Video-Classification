@@ -1,14 +1,15 @@
 import torch
+import torch.nn as nn
 
 
-def get_accuracy(labels: torch.Tensor, predictions: torch.Tensor):
-    """
-    Args:
-        labels: labels, are expected to have shape [batch]
-        predictions: expected to have shape [batch, sequence, nb_classes]
-    """
-    predictions = torch.argmax(predictions, dim=-1)
-    # predictions = predictions[:, -1]    # If a prediction was made for every frame
-    accuracy = torch.sum(torch.eq(labels, predictions)).detach().numpy() / labels.shape[0]
-
-    return accuracy
+def get_accuracy(model: nn.Module, dataloader: torch.utils.data.DataLoader, max_batches: int = 10):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    acc = 0
+    for step, batch in enumerate(dataloader, start=1):
+        imgs, labels = batch["video"].float(), batch["label"]
+        predictions = model(imgs.to(device))
+        predictions = torch.nn.functional.softmax(predictions, dim=-1)
+        acc += torch.mean(torch.eq(labels.to(device), torch.argmax(predictions, dim=-1)).float())
+        if step >= max_batches:
+            break
+    return acc / step

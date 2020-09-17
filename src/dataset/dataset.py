@@ -55,17 +55,20 @@ class Dataset(torch.utils.data.Dataset):
 
         video = []
         for j in range(self.video_size):
-            _, frame = cap.read()
-            try:
+            frame_ok, frame = cap.read()
+            if frame_ok:
                 if ModelConfig.USE_GRAY_SCALE:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 else:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            except:  # frame is None for some reason
-                print(f"\nFrame was none: {frame}, video: {self.labels[i, 0]}")
-                print(f"Frame count was: {frame_count}, batch frame: {j}")
-                print(f"Frame: {cap.get(cv2.CAP_PROP_POS_FRAMES), start: {start}}")
-                frame = np.zeros(ModelConfig.IMAGE_SIZES, np.uint8)
+            else:  # frame is None for some reason
+                # print(f"\nFrame was none: {frame}, video: {self.labels[i, 0]}")
+                # print(f"Frame count was: {frame_count}, batch frame: {j}")
+                # print(f"Frame: {cap.get(cv2.CAP_PROP_POS_FRAMES)}, start: {start}")
+                if ModelConfig.USE_GRAY_SCALE:
+                    frame = np.zeros(ModelConfig.IMAGE_SIZES, np.uint8)
+                else:
+                    frame = np.zeros((ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1], 3), np.uint8)
             frame = Image.fromarray(frame)
             if self.transform:
                 frame = self.transform(frame)

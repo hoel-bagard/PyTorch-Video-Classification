@@ -46,6 +46,7 @@ def main():
             shutil.copy(misc_file, os.path.join(output_folder, misc_file))
         print("Finished copying files")
 
+    torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
@@ -57,7 +58,8 @@ def main():
                                 # transforms.Normalize((0.5, ), (0.5, ))
                             ]))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=ModelConfig.BATCH_SIZE,
-                                                   shuffle=True, num_workers=ModelConfig.WORKERS)
+                                                   shuffle=True, num_workers=ModelConfig.WORKERS,
+                                                   drop_last=ModelConfig.MODEL == "LRCN")
 
     print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
 
@@ -68,7 +70,8 @@ def main():
                               # transforms.Normalize((0.5, ), (0.5, ))
                           ]))
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
-                                                 shuffle=False, num_workers=ModelConfig.WORKERS)
+                                                 shuffle=False, num_workers=ModelConfig.WORKERS,
+                                                 drop_last=ModelConfig.MODEL == "LRCN")
     print("Validation data loaded" + ' ' * (os.get_terminal_size()[0] - 22))
 
     print(f"\nLoaded {len(train_dataloader.dataset)} train data and",

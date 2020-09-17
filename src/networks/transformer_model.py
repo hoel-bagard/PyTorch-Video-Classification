@@ -6,7 +6,6 @@ import torch.nn.functional as F
 
 from src.networks.layers import (
     DarknetConv,
-    DarknetBlock
 )
 from src.networks.transformer_layer import TransformerLayer
 from config.model_config import ModelConfig
