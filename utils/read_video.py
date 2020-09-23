@@ -18,10 +18,10 @@ def main():
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        cv2.imshow('frame', gray)
-        key = cv2.waitKey(0)
-        if key == ord('q'):
-            break
+        while True:
+            cv2.imshow("frame", gray)
+            if cv2.waitKey(10) == ord("q"):
+                break
 
     cap.release()
     cv2.destroyAllWindows()

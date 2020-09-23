@@ -26,11 +26,7 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
     imgs = videos[:, 0, :, :, :]
     imgs = imgs.transpose(0, 2, 3, 1)  # Conversion to H x W x C
 
-    label_map = {}
-    with open(os.path.join(data_path, "classes.names")) as table_file:
-        for key, line in enumerate(table_file):
-            label = line.strip()
-            label_map[key] = label
+    label_map = DataConfig.LABEL_MAP
 
     new_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
