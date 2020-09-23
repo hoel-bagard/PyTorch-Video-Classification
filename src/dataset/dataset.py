@@ -25,18 +25,13 @@ class Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.video_size = ModelConfig.VIDEO_SIZE
 
-        # Build a map between id and names
-        self.label_map = {}
-        with open(os.path.join(data_path, "..", "classes.names")) as table_file:
-            for key, line in enumerate(table_file):
-                label = line.strip()
-                self.label_map[key] = label
+        self.label_map = DataConfig.LABEL_MAP
 
         labels = []
         for key in range(len(self.label_map)):
             for video_path in glob.glob(os.path.join(data_path, self.label_map[key], "*.avi")):
                 print(f"Loading data {video_path}   ", end="\r")
-                labels.append([video_path, key])
+                labels.append([video_path, key])        
 
         self.labels = np.asarray(labels)
 
@@ -47,6 +42,7 @@ class Dataset(torch.utils.data.Dataset):
         if torch.is_tensor(i):
             i = i.tolist()
 
+        label = int(self.labels[i, 1])
         cap = cv2.VideoCapture(self.labels[i, 0])
 
         frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
@@ -59,6 +55,7 @@ class Dataset(torch.utils.data.Dataset):
             if frame_ok:
                 if ModelConfig.USE_GRAY_SCALE:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                    frame = np.expand_dims(frame, -1)  # To keep a channel dimension (gray scale)
                 else:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:  # frame is None for some reason
@@ -66,23 +63,15 @@ class Dataset(torch.utils.data.Dataset):
                 # print(f"Frame count was: {frame_count}, batch frame: {j}")
                 # print(f"Frame: {cap.get(cv2.CAP_PROP_POS_FRAMES)}, start: {start}")
                 if ModelConfig.USE_GRAY_SCALE:
-                    frame = np.zeros(ModelConfig.IMAGE_SIZES, np.uint8)
+                    frame = np.zeros((*ModelConfig.IMAGE_SIZES, 1), np.uint8)
                 else:
                     frame = np.zeros((ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1], 3), np.uint8)
-            frame = Image.fromarray(frame)
-            if self.transform:
-                frame = self.transform(frame)
-            # To keep a channel dimension (gray scale)
-            if ModelConfig.USE_GRAY_SCALE:
-                frame = frame.unsqueeze(0)
             video.append(frame)
-
         cap.release()
-        if ModelConfig.USE_GRAY_SCALE:
-            video = torch.cat(video, 0)
-        else:
-            video = torch.stack(video, dim=0)
 
-        label = torch.from_numpy(np.asarray(self.labels[i, 1], dtype=np.uint8))
-        sample = {'video': video, 'label': label}
+        sample = {"video": np.asarray(video), "label": label}
+
+        if self.transform:
+            sample = self.transform(sample)
+
         return sample

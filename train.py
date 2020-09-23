@@ -11,6 +11,7 @@ from torchsummary import summary
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
+import src.dataset.transforms as transforms
 from src.networks.network import LRCN
 from src.networks.transformer_model import Transformer
 from src.train import train
@@ -51,11 +52,15 @@ def main():
 
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
                             transform=transforms.Compose([
-                                transforms.Resize(ModelConfig.IMAGE_SIZES),
-                                # transforms.Grayscale(),
-                                # transforms.RandomHorizontalFlip(),   # needs to be same flip for whole video
+                                transforms.Crop(top=900, bottom=400),
+                                transforms.RandomCrop(0.98),
+                                transforms.Resize(*ModelConfig.IMAGE_SIZES),
+                                transforms.Normalize(),
+                                transforms.VerticalFlip(),
+                                transforms.HorizontalFlip(),
+                                transforms.Rotate180(),
                                 transforms.ToTensor(),
-                                # transforms.Normalize((0.5, ), (0.5, ))
+                                transforms.Noise()
                             ]))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                    shuffle=True, num_workers=ModelConfig.WORKERS,
@@ -65,9 +70,10 @@ def main():
 
     val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
                           transform=transforms.Compose([
-                              transforms.Resize(ModelConfig.IMAGE_SIZES),
-                              transforms.ToTensor(),
-                              # transforms.Normalize((0.5, ), (0.5, ))
+                              transforms.Crop(top=900, bottom=400),
+                              transforms.Resize(*ModelConfig.IMAGE_SIZES),
+                              transforms.Normalize(),
+                              transforms.ToTensor()
                           ]))
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                  shuffle=False, num_workers=ModelConfig.WORKERS,

@@ -10,3 +10,10 @@ class DataConfig:
     KEEP_TB            = False                # Whether to remove the TensorBoard dir
     VAL_FREQ           = 5                  # How often to compute accuracy and images (also used for validation freq)
     RECORD_START       = 0                  # Checkpoints and TensorBoard are not recorded before this epoch
+
+    # Build a map between id and names
+    LABEL_MAP = {}
+    with open(os.path.join(data_path, "classes.names")) as table_file:
+        for key, line in enumerate(table_file):
+            label = line.strip()
+            LABEL_MAP[key] = label
