@@ -19,7 +19,6 @@ class Dataset(torch.utils.data.Dataset):
             data_path:
                 Path to the root folder of the dataset.
                 This folder is expected to contain subfolders for each class, with the videos inside.
-                It should also contain a "class.names" with all the classes
             transform (callable, optional): Optional transform to be applied on a sample.
         """
         self.transform = transform
@@ -59,9 +58,6 @@ class Dataset(torch.utils.data.Dataset):
                 else:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:  # frame is None for some reason
-                # print(f"\nFrame was none: {frame}, video: {self.labels[i, 0]}")
-                # print(f"Frame count was: {frame_count}, batch frame: {j}")
-                # print(f"Frame: {cap.get(cv2.CAP_PROP_POS_FRAMES)}, start: {start}")
                 if ModelConfig.USE_GRAY_SCALE:
                     frame = np.zeros((*ModelConfig.IMAGE_SIZES, 1), np.uint8)
                 else:
