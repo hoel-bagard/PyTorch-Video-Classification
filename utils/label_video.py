@@ -58,16 +58,22 @@ def check_entry(entries, video_path):
 
 def make_video_timestamps(video_path):
     base_text = "Press \"d\" to toggle defect/no defect, space to go to the next frame and \"q\" to quit"
+    status = False # False for non-visible, True for visible
+    visible_color, non_visible_color = (0, 255, 0), (0, 0, 255)
     cap = cv2.VideoCapture(video_path)
     label_time_stamps = []
     for frame_nb in range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))):
         ret, img = cap.read()
         if ret:    
-            # width, height = img.shape[0:2]
-            # img = cv2.resize(img, (int(width/3), int(height/3)))
             img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
             img = cv2.putText(img, base_text + f"    (defect {os.path.normpath(video_path).split(os.sep)[-2]})", (20, 25),
                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+
+            img = cv2.putText(img, f"Status: defect {'visible' if status else 'non-visible'}", (img.shape[1]-300, 25),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
+            img = cv2.circle(img, (img.shape[1]-100, 20), 15, visible_color if status else non_visible_color, -1)
+
+            # Show image and wait for user input
             while True:
                 cv2.imshow("Frame", img)
                 key = cv2.waitKey(10)
@@ -75,6 +81,7 @@ def make_video_timestamps(video_path):
                     exit()
                 if key == ord("d"):
                     label_time_stamps.append(frame_nb)
+                    status = not status
                     break
                 if key == 32:  # Space key
                     break
