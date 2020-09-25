@@ -77,6 +77,10 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                         else:
                             out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
                         tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
+                    # Video example
+                    out_video = draw_pred_video(videos[0], predictions[0], labels[0])
+                    tb_writer.add_video("Train/video", out_video, global_step=epoch, fps=16)
+                    # Accuracy plot
                     train_acc = get_accuracy(model, train_dataloader)
                     tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
 
