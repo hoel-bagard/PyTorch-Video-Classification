@@ -1,3 +1,6 @@
+import os
+
+
 class DataConfig:
     # Recording part
     DATA_PATH          = 'path/to/dataset'  # Path to the dataset folder
@@ -13,7 +16,7 @@ class DataConfig:
 
     # Build a map between id and names
     LABEL_MAP = {}
-    with open(os.path.join(data_path, "classes.names")) as table_file:
+    with open(os.path.join(DATA_PATH, "classes.names")) as table_file:
         for key, line in enumerate(table_file):
             label = line.strip()
             LABEL_MAP[key] = label
