@@ -13,11 +13,11 @@ from config.model_config import ModelConfig
 
 def get_cnn_output_size():
     width, height = ModelConfig.IMAGE_SIZES
-    for kernel_size, stride in zip(ModelConfig.SIZES, ModelConfig.STRIDES):
-        width = ((width - kernel_size) // stride) + 1
+    for kernel_size, stride, padding in zip(ModelConfig.SIZES, ModelConfig.STRIDES, ModelConfig.PADDINGS):
+        width = ((width - kernel_size + 2*padding) // stride) + 1
 
-    for kernel_size, stride in zip(ModelConfig.SIZES, ModelConfig.STRIDES):
-        height = ((height - kernel_size) // stride) + 1
+    for kernel_size, stride, padding in zip(ModelConfig.SIZES, ModelConfig.STRIDES, ModelConfig.PADDINGS):
+        height = ((height - kernel_size + 2*padding) // stride) + 1
 
     return width*height*ModelConfig.CHANNELS[-1]
 
@@ -30,9 +30,11 @@ class CNN(nn.Module):
         sizes = ModelConfig.SIZES
         strides = ModelConfig.STRIDES
 
-        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0])
-        self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i])
-                                      for i in range(1, len(channels))])
+        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0],
+                                      padding=ModelConfig.PADDINGS[0])
+        self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i],
+                                                  padding=ModelConfig.PADDINGS[i])
+                                    for i in range(1, len(channels))])
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -51,8 +53,9 @@ class CNN(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, nb_classes: int = 2, hidden_size: int = 60, num_layers: int = 5):
+    def __init__(self, hidden_size: int = 60, num_layers: int = 5):
         super(Transformer, self).__init__()
+        nb_classes = ModelConfig.OUTPUT_CLASSES
         self.cnn_output_size = get_cnn_output_size()
         self.cnn = CNN()
         self.transformer = TransformerLayer(self.cnn_output_size, nb_classes)

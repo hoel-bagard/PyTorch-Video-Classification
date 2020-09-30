@@ -1,3 +1,13 @@
+import os
+import glob
+from typing import Dict
+
+import numpy as np
+import cv2
+
+from config.model_config import ModelConfig
+
+
 def default_loader(data_path: str, label_map: Dict, load_videos: bool = False) -> np.ndarray:
     """
     Args:
@@ -10,18 +20,13 @@ def default_loader(data_path: str, label_map: Dict, load_videos: bool = False) -
     """
     data = []
     for key in range(len(label_map)):
-
-        for video_path in glob.glob(os.path.join(data_path, self.label_map[key], "*.avi")):
-            print(f"Loading data {video_path}   ", end="\r")
-            labels.append([video_path, key])        
-
-
         file_types = ("*.avi", "*.mp4")
         pathname = os.path.join(data_path, label_map[key], "**")
         video_paths = []
         [video_paths.extend(glob.glob(os.path.join(pathname, ext), recursive=True)) for ext in file_types]
         for video_path in video_paths:
-            print(f"Loading data {video_path}   ", end="\r")
+            msg = f"Loading data {video_path}"
+            print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
             if load_videos:
                 cap = cv2.VideoCapture(video_path)
                 video = []
@@ -33,7 +38,7 @@ def default_loader(data_path: str, label_map: Dict, load_videos: bool = False) -
                             frame = np.expand_dims(frame, -1)  # To keep a channel dimension (gray scale)
                         else:
                             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                        video.append(video)
+                        video.append(frame)
                 cap.release()
                 data.append([video, key])
             else:

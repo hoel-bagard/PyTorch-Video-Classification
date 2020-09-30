@@ -3,29 +3,22 @@ import os
 
 import torch
 import torch.nn as nn
-from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ExponentialLR
-import numpy as np
 
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
 from src.utils.trainer import Trainer
-from src.utils.draw import draw_pred
-from src.utils.accuracy import get_accuracy
+from src.utils.tensorboard import TensorBoard
+from src.utils.metrics import Metrics
 
 
 def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     loss_fn = nn.NLLLoss()  # nn.CrossEntropyLoss()
     trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader)
     scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
-    tb_writer = SummaryWriter(DataConfig.TB_DIR)
-    if ModelConfig.MODEL != "LRCN":
-        tb_writer.add_graph(model, (torch.empty(ModelConfig.BATCH_SIZE, ModelConfig.VIDEO_SIZE,
-                                                1 if ModelConfig.USE_GRAY_SCALE else 3,
-                                                ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1],
-                                                device=device), ))
-    tb_writer.flush()
+    if DataConfig.USE_TB:
+        metrics = Metrics(model, loss_fn, train_dataloader, val_dataloader)
+        tensorboard = TensorBoard(model, metrics)
 
     best_loss = 1000
     last_checkpoint_epoch = 0
@@ -36,9 +29,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
 
         epoch_loss = trainer.train_epoch()
         if DataConfig.USE_TB:
-            tb_writer.add_scalar("Training Loss", epoch_loss, epoch)
-            tb_writer.add_scalar("Learning Rate", scheduler.get_last_lr()[0], epoch)
-            tb_writer.flush()
+            tensorboard.write_loss(epoch, epoch_loss)
+            tensorboard.write_lr(epoch, scheduler.get_last_lr()[0])
 
         if (epoch_loss < best_loss and DataConfig.USE_CHECKPOINT and
                 epoch >= DataConfig.RECORD_START and (epoch - last_checkpoint_epoch) >= DataConfig.CHECKPT_SAVE_FREQ):
@@ -56,58 +48,24 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                 epoch_loss = trainer.val_epoch()
 
                 if DataConfig.USE_TB:
-                    tb_writer.add_scalar('Validation loss', epoch_loss, epoch)
+                    print("\nStarting to compute TensorBoard metrics", end="\r", flush=True)
+                    tensorboard.write_loss(epoch, epoch_loss, mode="Validation")
 
                     # Metrics for the Train dataset
-                    batch = next(iter(train_dataloader))
-                    if ModelConfig.MODEL == "LRCN":
-                        # LSTM needs proper batches (the pytorch implementation at least)
-                        videos, labels = batch["video"].float(), batch["label"][:4]
-                        model.reset_lstm_state(videos.shape[0])
-                    else:
-                        videos, labels = batch["video"][:4].float(), batch["label"][:4]
-                    predictions = model(videos.to(device))
-                    if ModelConfig.MODEL == "LRCN":
-                        predictions, videos = predictions[:4], videos[:4]
-                    predictions = torch.nn.functional.softmax(predictions, dim=-1)
-                    out_imgs = draw_pred(videos, predictions, labels)
-                    for image_index, out_img in enumerate(out_imgs):
-                        if ModelConfig.USE_GRAY_SCALE:
-                            out_img = np.expand_dims(out_img, 0)
-                        else:
-                            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
-                        tb_writer.add_image(f"Train/prediction_{image_index}", out_img, global_step=epoch)
-                    # Video example
-                    out_video = draw_pred_video(videos[0], predictions[0], labels[0])
-                    tb_writer.add_video("Train/video", out_video, global_step=epoch, fps=16)
-                    # Accuracy plot
-                    train_acc = get_accuracy(model, train_dataloader)
-                    tb_writer.add_scalar("Training Accuracy", train_acc, epoch)
+                    tensorboard.write_images(epoch, train_dataloader)
+                    tensorboard.write_videos(epoch, train_dataloader)
+                    train_acc = tensorboard.write_metrics(epoch)
 
                     # Metrics for the Validation dataset
-                    batch = next(iter(val_dataloader))
-                    if ModelConfig.MODEL == "LRCN":
-                        videos, labels = batch["video"].float(), batch["label"][:4]
-                        model.reset_lstm_state(videos.shape[0])
-                    else:
-                        videos, labels = batch["video"][:4].float(), batch["label"][:4]
-                    predictions = model(videos.to(device))
-                    if ModelConfig.MODEL == "LRCN":
-                        predictions, videos = predictions[:4], videos[:4]
-                    predictions = torch.nn.functional.softmax(predictions, dim=-1)
-                    out_imgs = draw_pred(videos, predictions, labels)
-                    for image_index, out_img in enumerate(out_imgs):
-                        if ModelConfig.USE_GRAY_SCALE:
-                            out_img = np.expand_dims(out_img, 0)
-                        else:
-                            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
-                        tb_writer.add_image(f"Validation/prediction_{image_index}", out_img, global_step=epoch)
-                    val_acc = get_accuracy(model, val_dataloader)
-                    tb_writer.add_scalar("Validation Accuracy", val_acc, epoch)
+                    tensorboard.write_images(epoch, val_dataloader, mode="Validation")
+                    tensorboard.write_videos(epoch, val_dataloader, mode="Validation")
+                    val_acc = tensorboard.write_metrics(epoch, mode="Validation")
 
-                    print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}", end='\r', flush=True)
+                    print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}",
+                          end='\r', flush=True)
 
-                print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s", flush=1)
+                print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s",
+                      flush=True)
         scheduler.step()
 
     print("Finished Training")

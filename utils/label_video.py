@@ -2,7 +2,6 @@ import argparse
 import os
 import glob
 import json
-import shutil
 
 import cv2
 import numpy as np
@@ -58,15 +57,15 @@ def check_entry(entries, video_path):
 
 def make_video_timestamps(video_path):
     base_text = "Press \"d\" to toggle defect/no defect, space to go to the next frame and \"q\" to quit"
-    status = False # False for non-visible, True for visible
+    status = False  # False for non-visible, True for visible
     visible_color, non_visible_color = (0, 255, 0), (0, 0, 255)
     cap = cv2.VideoCapture(video_path)
     label_time_stamps = []
     for frame_nb in range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))):
         ret, img = cap.read()
-        if ret:    
+        if ret:
             img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
-            img = cv2.putText(img, base_text + f"    (defect {os.path.normpath(video_path).split(os.sep)[-2]})", (20, 25),
+            img = cv2.putText(img, base_text + f"  (defect {os.path.normpath(video_path).split(os.sep)[-2]})", (20, 25),
                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
 
             img = cv2.putText(img, f"Status: defect {'visible' if status else 'non-visible'}", (img.shape[1]-300, 25),
@@ -104,8 +103,8 @@ def main():
             print("Please give a different output path or delete existing file")
             exit()
         else:
-            with open(output_path) as json_file: 
-                existing_data = json.load(json_file) 
+            with open(output_path) as json_file:
+                existing_data = json.load(json_file)
                 entries = existing_data["entries"]
     else:
         # Creates dummy pre-existing data if there was none
@@ -133,7 +132,7 @@ def main():
     # Write everything to disk
     print(f"\nWriting labels to {output_path}")
     with open(output_path, 'w') as label_file:
-        json.dump(existing_data, label_file, indent=4) 
+        json.dump(existing_data, label_file, indent=4)
 
     print("Finished labelling dataset")
 

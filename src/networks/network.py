@@ -36,7 +36,7 @@ class CNN(nn.Module):
 
 
 class LRCN(nn.Module):
-    def __init__(self, nb_classes: int = 2, hidden_size: int = 60, num_layers: int = 5):
+    def __init__(self, hidden_size: int = 60, num_layers: int = 5):
         super(LRCN, self).__init__()
         self.cnn = CNN()
 
@@ -47,7 +47,7 @@ class LRCN(nn.Module):
         self.hidden_cell = (torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device),
                             torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device))
         self.lstm = nn.LSTM(576, hidden_size, num_layers, batch_first=True)
-        self.dense = nn.Linear(hidden_size, nb_classes)
+        self.dense = nn.Linear(hidden_size, ModelConfig.OUTPUT_CLASSES)
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()

@@ -66,8 +66,6 @@ class Trainer:
             # labels = labels * torch.ones(outputs.size()[:-1], device=self.device).long()
             # outputs = outputs.permute((0, 2, 1))
 
-
-
             loss = self.loss_fn(outputs, labels)
 
             epoch_progress = int(30 * (step/self.val_steps_per_epoch))

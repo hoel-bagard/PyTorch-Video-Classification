@@ -1,4 +1,3 @@
-import os
 from typing import Tuple
 
 import cv2
@@ -50,7 +49,7 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
 
 
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
-              size: Tuple[int, int] = (480, 480)) -> np.ndarray:
+                    size: Tuple[int, int] = (480, 480)) -> np.ndarray:
     """
     Draw predictions and labels on the video to help with TensorBoard visualisation.
     Args:
@@ -62,7 +61,7 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     """
     video: np.ndarray = video.cpu().detach().numpy()
     label: np.ndarray = label.cpu().detach().numpy()
-    prediction: np.ndarray = prediction.cpu().detach().numpy()
+    preds: np.ndarray = prediction.cpu().detach().numpy()
 
     video = video.transpose(0, 2, 3, 1)  # Conversion to H x W x C
 
@@ -74,7 +73,7 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
         img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
 
         # If there are too many classes, just print the top 3 ones
-        if len(pred) > 5:
+        if len(preds) > 5:
             # Gets indices of top 3 pred
             idx = np.argpartition(preds, -3)[-3:]
             idx = idx[np.argsort(preds[idx])][::-1]

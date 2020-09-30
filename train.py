@@ -5,16 +5,15 @@ import shutil
 import time
 
 import torch
-import torchvision.transforms as transforms
+from torchvision.transforms import Compose
 from torchsummary import summary
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
-import src.dataset.transforms as transforms
-from src.networks.network import LRCN
-from src.networks.transformer_model import Transformer
+from src.networks.build_network import build_model
 from src.train import train
+import src.dataset.transforms as transforms
 
 
 def main():
@@ -48,10 +47,9 @@ def main():
         print("Finished copying files")
 
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
-                            transform=transforms.Compose([
+                            transform=Compose([
                                 transforms.Crop(top=900, bottom=400),
                                 transforms.RandomCrop(0.98),
                                 transforms.Resize(*ModelConfig.IMAGE_SIZES),
@@ -69,7 +67,7 @@ def main():
     print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
 
     val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
-                          transform=transforms.Compose([
+                          transform=Compose([
                               transforms.Crop(top=900, bottom=400),
                               transforms.Resize(*ModelConfig.IMAGE_SIZES),
                               transforms.Normalize(),
@@ -83,12 +81,7 @@ def main():
     print(f"\nLoaded {len(train_dataloader.dataset)} train data and",
           f"{len(val_dataloader.dataset)} validation data", flush=True)
 
-    if ModelConfig.MODEL == "LRCN":
-        model = LRCN(nb_classes=ModelConfig.OUTPUT_CLASSES)
-    elif ModelConfig.MODEL == "Transformer":
-        model = Transformer(nb_classes=ModelConfig.OUTPUT_CLASSES)
-    model = model.float()
-    model.to(device)
+    model = build_model(ModelConfig.NETWORK)
     # The summary does not work with an LSTM for some reason
     if ModelConfig.MODEL != "LRCN":
         summary(model, (ModelConfig.VIDEO_SIZE, 1 if ModelConfig.USE_GRAY_SCALE else 3,
