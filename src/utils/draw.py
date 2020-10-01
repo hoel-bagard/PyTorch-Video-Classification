@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from config.data_config import DataConfig
+from config.model_config import ModelConfig
 
 
 def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
@@ -60,7 +61,7 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     Returns: images with information written on them
     """
     video: np.ndarray = video.cpu().detach().numpy()
-    label: np.ndarray = label.cpu().detach().numpy()
+    label: int = int(label.cpu().detach().numpy())
     preds: np.ndarray = prediction.cpu().detach().numpy()
 
     video = video.transpose(0, 2, 3, 1)  # Conversion to H x W x C
@@ -77,12 +78,17 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
             # Gets indices of top 3 pred
             idx = np.argpartition(preds, -3)[-3:]
             idx = idx[np.argsort(preds[idx])][::-1]
-            preds = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
+            preds_text = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
         else:
-            preds = str([round(float(conf), 2) for conf in preds]) + f"  ==> {np.argmax(preds)}"
+            preds_text = str([round(float(conf), 2) for conf in preds]) + f"  ==> {np.argmax(preds)}"
 
-        img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
+        img = cv2.putText(img, preds_text, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         new_video.append(img)
-    return np.asarray(new_video)
+
+    new_video = np.asarray(new_video)
+    if ModelConfig.USE_GRAY_SCALE:
+        new_video = np.expand_dims(new_video, -1)  # To keep a channel dimension (gray scale)
+
+    return new_video

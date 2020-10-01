@@ -1,4 +1,5 @@
 from torch.utils.tensorboard import SummaryWriter  # noqa: F401  # Needs to be there to avoid segfaults
+import argparse
 import os
 import glob
 import shutil
@@ -17,6 +18,11 @@ import src.dataset.transforms as transforms
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--limit", default=None, type=int, help="Limits the number of apparition of each class")
+    parser.add_argument("--load_data", action="store_true", help="Loads all the videos into RAM")
+    args = parser.parse_args()
+
     if not DataConfig.KEEP_TB:
         while os.path.exists(DataConfig.TB_DIR):
             shutil.rmtree(DataConfig.TB_DIR, ignore_errors=True)
@@ -49,6 +55,8 @@ def main():
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
 
     train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
+                            limit=args.limit,
+                            load_videos=args.load_data,
                             transform=Compose([
                                 transforms.Crop(top=900, bottom=400),
                                 transforms.RandomCrop(0.98),
@@ -67,6 +75,8 @@ def main():
     print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
 
     val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
+                          limit=args.limit,
+                          load_videos=args.load_data,
                           transform=Compose([
                               transforms.Crop(top=900, bottom=400),
                               transforms.Resize(*ModelConfig.IMAGE_SIZES),

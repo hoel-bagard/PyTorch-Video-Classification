@@ -95,7 +95,10 @@ class TensorBoard():
 
         # Write prediction on a video and add it to TensorBoard
         out_video = draw_pred_video(videos[0], predictions[0], labels[0])
-        tb_writer.add_video("{mode}/video", out_video, global_step=epoch, fps=16)
+        out_video = np.transpose(out_video, (0, 3, 1, 2))  # HWC -> CHW
+        out_video = np.expand_dims(out_video, 0)  # Re-add batch dimension
+
+        tb_writer.add_video("Video", out_video, global_step=epoch, fps=16)
 
     def write_metrics(self, epoch: int, mode: str = "Train") -> float:
         """

@@ -28,7 +28,7 @@ class Metrics:
         """
         self.cm = np.zeros((ModelConfig.OUTPUT_CLASSES, ModelConfig.OUTPUT_CLASSES))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
-            imgs, labels = batch["img"].float(), batch["label"].cpu().detach().numpy()
+            imgs, labels = batch["video"].float(), batch["label"].cpu().detach().numpy()
             predictions = self.model(imgs.to(self.device))
             predictions = torch.nn.functional.softmax(predictions, dim=-1)
             predictions = torch.argmax(predictions, dim=-1).int().cpu().detach().numpy()

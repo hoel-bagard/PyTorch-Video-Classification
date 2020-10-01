@@ -27,7 +27,7 @@ class Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.load_videos = load_videos
 
-        self.labels = default_loader(data_path, DataConfig.LABEL_MAP)
+        self.labels = default_loader(data_path, DataConfig.LABEL_MAP, limit=limit, load_videos=self.load_videos)
 
     def __len__(self):
         return len(self.labels)
