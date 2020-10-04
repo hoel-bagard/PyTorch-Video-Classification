@@ -27,12 +27,14 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
     imgs = imgs.transpose(0, 2, 3, 1)  # Conversion to H x W x C
 
     label_map = DataConfig.LABEL_MAP
+    # TODO: remove this temp fix and do it properly
+    if not size:
+        size = ModelConfig.IMAGE_SIZES
 
     new_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
         img = np.asarray(img * 255.0, dtype=np.uint8)
-        if size:
-            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
 
         # If there are too many classes, just print the top 3 ones
         if len(preds) > 5:
@@ -68,12 +70,14 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     video = video.transpose(0, 2, 3, 1)  # Conversion to H x W x C
 
     label_map = DataConfig.LABEL_MAP
+    # TODO: remove this temp fix and do it properly
+    if not size:
+        size = ModelConfig.IMAGE_SIZES
 
     new_video = []
     for img in video:
         img = np.asarray(img * 255.0, dtype=np.uint8)
-        if size:
-            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
 
         # If there are too many classes, just print the top 3 ones
         if len(preds) > 5:

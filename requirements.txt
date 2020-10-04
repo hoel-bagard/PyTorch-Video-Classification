@@ -4,3 +4,5 @@ torchsummary
 tensorboard
 opencv-python
 numpy
+matplotlib
+moviepy
