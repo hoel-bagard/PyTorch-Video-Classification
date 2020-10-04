@@ -9,7 +9,7 @@ from config.model_config import ModelConfig
 
 
 def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Tensor,
-              size: Tuple[int, int] = (480, 480)) -> np.ndarray:
+              size: Tuple[int, int] = None) -> np.ndarray:
     """
     Draw predictions and labels on the image to help with TensorBoard visualisation.
     Args:
@@ -31,7 +31,8 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
     new_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
         img = np.asarray(img * 255.0, dtype=np.uint8)
-        img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        if size:
+            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
 
         # If there are too many classes, just print the top 3 ones
         if len(preds) > 5:
@@ -50,7 +51,7 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
 
 
 def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.Tensor,
-                    size: Tuple[int, int] = (480, 480)) -> np.ndarray:
+                    size: Tuple[int, int] = None) -> np.ndarray:
     """
     Draw predictions and labels on the video to help with TensorBoard visualisation.
     Args:
@@ -71,7 +72,8 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
     new_video = []
     for img in video:
         img = np.asarray(img * 255.0, dtype=np.uint8)
-        img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        if size:
+            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
 
         # If there are too many classes, just print the top 3 ones
         if len(preds) > 5:
