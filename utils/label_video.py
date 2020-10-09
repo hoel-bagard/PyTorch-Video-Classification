@@ -56,16 +56,21 @@ def check_entry(entries, video_path):
 
 
 def make_video_timestamps(video_path):
-    base_text = "Press \"d\" to toggle defect/no defect, space to go to the next frame and \"q\" to quit"
+    base_text = ("Press \"space\" to toggle defect/no defect, \"a\" and \"d\" to go to the previous and next frame"
+                 "and \"q\" to quit")
     status = False  # False for non-visible, True for visible
     visible_color, non_visible_color = (0, 255, 0), (0, 0, 255)
     cap = cv2.VideoCapture(video_path)
+    video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     label_time_stamps = []
-    for frame_nb in range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))):
+    frame_nb = 0
+    while frame_nb < video_length:
         ret, img = cap.read()
         if ret:
             img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
-            img = cv2.putText(img, base_text + f"  (defect {os.path.normpath(video_path).split(os.sep)[-2]})", (20, 25),
+            defect_text = f"    -    The defect is: {os.path.normpath(video_path).split(os.sep)[-5]}"
+            frame_text = f"    -    Frame {frame_nb} / {video_length}"
+            img = cv2.putText(img, base_text + defect_text + frame_text, (20, 25),
                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
 
             img = cv2.putText(img, f"Status: defect {'visible' if status else 'non-visible'}", (img.shape[1]-300, 25),
@@ -76,16 +81,32 @@ def make_video_timestamps(video_path):
             while True:
                 cv2.imshow("Frame", img)
                 key = cv2.waitKey(10)
-                if key == ord("q"):
-                    exit()
-                if key == ord("d"):
+                if key == 32:  # Space key, toggle
                     label_time_stamps.append(frame_nb)
+                    frame_nb += 1
                     status = not status
                     break
-                if key == 32:  # Space key
+                if key == ord("a"):  # previous
+                    if frame_nb > 0:
+                        # Remove time stamps
+                        if label_time_stamps != [] and label_time_stamps[-1] == frame_nb:
+                            status = not status
+                        label_time_stamps = [t for t in label_time_stamps if t != frame_nb]
+                        # Go back a frame
+                        frame_nb -= 1
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_nb)
                     break
+                if key == ord("d"):  # next
+                    frame_nb += 1
+                    break
+                if key == ord("q"):  # quit
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    return -1
         else:
             break
+    cap.release()
+    cv2.destroyAllWindows()
     return label_time_stamps
 
 
@@ -98,7 +119,7 @@ def main():
     output_path = args.output_path if args.output_path else os.path.join(args.data_path, "labels.json")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     if os.path.isfile(output_path):
-        replace = query_yes_no("Labels already exists at {output_path}, do you wish to add new entries to it ?")
+        replace = query_yes_no(f"Labels already exists at {output_path}, do you wish to add new entries to it ?")
         if not replace:
             print("Please give a different output path or delete existing file")
             exit()
@@ -121,13 +142,20 @@ def main():
             print(f"\nThere is already an entry for {video_path}, proceeding to next video")
             continue
 
+        ready = query_yes_no("Are you ready for the next video ?", default="no")
+        while not ready:
+            ready = query_yes_no("Are you ready for the next video ?", default="no")
+
         # Make time stamps and create json entry
         label_time_stamps = make_video_timestamps(video_path)
-        json_entry = {
-                        "file_path": video_path,
-                        "time_stamps": label_time_stamps
-                    }
-        entries.append(json_entry)
+        if label_time_stamps != -1:
+            json_entry = {
+                            "file_path": video_path,
+                            "time_stamps": label_time_stamps
+                        }
+            entries.append(json_entry)
+        else:
+            break
 
     # Write everything to disk
     print(f"\nWriting labels to {output_path}")
