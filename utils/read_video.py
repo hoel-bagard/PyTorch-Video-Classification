@@ -6,7 +6,6 @@ import numpy as np
 
 def crop(frame, left: int = 0, right: int = 1, top: int = 0, bottom: int = 1):
     frame = frame[top:-bottom, left:-right]
-
     return frame
 
 

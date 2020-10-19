@@ -67,8 +67,10 @@ def make_video_timestamps(video_path):
     while frame_nb < video_length:
         ret, img = cap.read()
         if ret:
+            # Crop
+            img = img[900:-400]
             img = cv2.copyMakeBorder(img, 40, 0, 0, 0, cv2.BORDER_CONSTANT, None, 0)
-            defect_text = f"    -    The defect is: {os.path.normpath(video_path).split(os.sep)[-5]}"
+            defect_text = f"    -    The defect is: {os.path.normpath(video_path).split(os.sep)[-4]}"
             frame_text = f"    -    Frame {frame_nb} / {video_length}"
             img = cv2.putText(img, base_text + defect_text + frame_text, (20, 25),
                               cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1, cv2.LINE_AA)
@@ -86,7 +88,7 @@ def make_video_timestamps(video_path):
                     frame_nb += 1
                     status = not status
                     break
-                if key == ord("a"):  # previous
+                elif key == ord("a"):  # previous
                     if frame_nb > 0:
                         # Remove time stamps
                         if label_time_stamps != [] and label_time_stamps[-1] == frame_nb:
@@ -96,10 +98,10 @@ def make_video_timestamps(video_path):
                         frame_nb -= 1
                     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_nb)
                     break
-                if key == ord("d"):  # next
+                elif key == ord("d"):  # next
                     frame_nb += 1
                     break
-                if key == ord("q"):  # quit
+                elif key == ord("q"):  # quit
                     cap.release()
                     cv2.destroyAllWindows()
                     return -1
@@ -113,6 +115,8 @@ def make_video_timestamps(video_path):
 def main():
     parser = argparse.ArgumentParser("Tool to help label videos frame by frame")
     parser.add_argument("data_path", help='Path to the dataset')
+    parser.add_argument("--defect", default=None, type=str,
+                        help='If you wish to label one defect in particuler (for exemple: "g1000")')
     parser.add_argument("--output_path", default=None, type=str, help='Path to where the label file will be created')
     args = parser.parse_args()
 
@@ -135,16 +139,20 @@ def main():
     file_list = glob.glob(os.path.join(args.data_path, "**", "*.avi"), recursive=True)
     nb_videos: int = len(file_list)
     for i, video_path in enumerate(file_list):
-        print(f"Processing video {os.path.basename(video_path)} ({i+1}/{nb_videos})", flush=True, end='\r')
+
+        # When labelling only one type of defect, skip the other ones
+        if args.defect and args.defect not in video_path:
+            continue
+
+        print(f"Processing video {video_path} ({i+1}/{nb_videos})", flush=True)
 
         # Check if it is already in the json
         if os.path.isfile(output_path) and check_entry(entries, video_path):
             print(f"\nThere is already an entry for {video_path}, proceeding to next video")
             continue
 
-        ready = query_yes_no("Are you ready for the next video ?", default="no")
-        while not ready:
-            ready = query_yes_no("Are you ready for the next video ?", default="no")
+        while not query_yes_no("Are you ready for the next video ?", default="no"):
+            continue
 
         # Make time stamps and create json entry
         label_time_stamps = make_video_timestamps(video_path)
