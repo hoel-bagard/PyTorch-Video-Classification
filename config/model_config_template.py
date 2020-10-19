@@ -8,6 +8,8 @@ class ModelConfig:
     DECAY_START        = 10
     REG_FACTOR         = 0.005       # Regularization factor (Used to be 0.005 for the fit mode)
 
+    USE_N_TO_N         = True        # If True then there must be a label for each frame
+
     # Network part
     MODEL = "Transformer"   # Transformer or LRCN
     CHANNELS = [3, 8, 16, 32, 32, 16]

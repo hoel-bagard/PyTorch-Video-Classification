@@ -55,9 +55,12 @@ class LRCN(nn.Module):
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
         x, self.hidden_cell = self.lstm(x, self.hidden_cell)
-        x = x[:, -1]
-        x = self.dense(x)
-
+        if not ModelConfig.USE_N_TO_N:
+            x = x[:, -1]
+            x = self.dense(x)
+        else:
+            print("N to n not implemented for LRCN")
+            exit()
         return F.log_softmax(x, dim=-1)
 
     def reset_lstm_state(self, batch_size: int = ModelConfig.BATCH_SIZE):

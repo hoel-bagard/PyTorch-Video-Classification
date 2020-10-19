@@ -1,6 +1,6 @@
 import torch
 
-from .network import LRCN
+from .lrcn_network import LRCN
 from .transformer_model import Transformer
 
 

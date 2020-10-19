@@ -6,7 +6,10 @@ import numpy as np
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
-from src.dataset.dataset_utils import default_loader
+from src.dataset.dataset_utils import (
+    default_loader,
+    n_to_n_loader
+)
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -27,7 +30,10 @@ class Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.load_videos = load_videos
 
-        self.labels = default_loader(data_path, DataConfig.LABEL_MAP, limit=limit, load_videos=self.load_videos)
+        if ModelConfig.USE_N_TO_N:
+            self.labels = n_to_n_loader(data_path, DataConfig.LABEL_MAP, limit=limit, load_videos=self.load_videos)
+        else:
+            self.labels = default_loader(data_path, DataConfig.LABEL_MAP, limit=limit, load_videos=self.load_videos)
 
     def __len__(self):
         return len(self.labels)
