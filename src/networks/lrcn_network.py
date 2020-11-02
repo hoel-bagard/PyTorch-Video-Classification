@@ -1,13 +1,7 @@
-import math
-
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
-from src.networks.layers import (
-    DarknetConv,
-    DarknetBlock
-)
+from src.networks.layers import DarknetConv
 from .network_utils import (
     layer_init,
     get_cnn_output_size

@@ -1,11 +1,8 @@
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.networks.layers import (
-    DarknetConv,
-    DarknetBlock
-)
+from src.networks.layers import DarknetBlock
+
 from .network_utils import layer_init
 from config.model_config import ModelConfig
 
@@ -21,8 +18,8 @@ class Conv3DNet(nn.Module):
 
         self.apply(layer_init)
 
-    def forward(self, inputs):
-        batch_size, timesteps, C, H, W = inputs.size()
+    def forward(self, x):
+        batch_size, timesteps, C, H, W = x.size()
 
         if not ModelConfig.USE_N_TO_N:
             print("N to 1 not implemented for 3DNet")
