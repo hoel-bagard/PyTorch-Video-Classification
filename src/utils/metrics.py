@@ -28,15 +28,19 @@ class Metrics:
         """
         self.cm = np.zeros((ModelConfig.OUTPUT_CLASSES, ModelConfig.OUTPUT_CLASSES))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
-            imgs, labels = batch["video"].float(), batch["label"].cpu().detach().numpy()
-            predictions = self.model(imgs.to(self.device))
-            predictions = torch.nn.functional.softmax(predictions, dim=-1)
-            predictions = torch.argmax(predictions, dim=-1).int().cpu().detach().numpy()
+            imgs, labels_batch = batch["video"].float(), batch["label"].cpu().detach().numpy()
+            predictions_batch = self.model(imgs.to(self.device))
+            predictions_batch = torch.nn.functional.softmax(predictions_batch, dim=-1)
+            predictions_batch = torch.argmax(predictions_batch, dim=-1).int().cpu().detach().numpy()
 
-            for (label, pred) in zip(labels, predictions):
-                self.cm[label, pred] += 1
+            for (label_video, pred_video) in zip(labels_batch, predictions_batch):  # batch
+                if ModelConfig.USE_N_TO_N:
+                    for (label_frame, pred_frame) in zip(label_video, pred_video):
+                        self.cm[label_frame, pred_frame] += 1
+                else:
+                    self.cm[label_video, pred_video] += 1
 
-            if step >= self.max_batches:
+            if self.max_batches and step >= self.max_batches:
                 break
 
     def get_avg_acc(self) -> float:

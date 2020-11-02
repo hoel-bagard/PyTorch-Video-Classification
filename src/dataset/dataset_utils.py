@@ -48,11 +48,10 @@ def default_loader(data_path: str, label_map: Dict, limit: int = None, load_vide
                 data.append([np.asarray(video), key])
             else:
                 data.append([video_path, key])
-            if limit and i >= limit:
-                break
+            if limit and i == limit:
+                return np.asarray(data)
 
-    data = np.asarray(data)
-    return data
+    return np.asarray(data)
 
 
 def read_label(label: str, label_map: Dict, video_length: int):
@@ -74,16 +73,17 @@ def read_label(label: str, label_map: Dict, video_length: int):
         if(value == "not_visible"):
             not_visible_cls = key
             break
-    assert not_visible_cls, "There should be a 'not_visible' class"
+    assert "not_visible_cls" in locals(), "There should be a 'not_visible' class"
 
     visibility_status = False
-    label["time_stamps"].append(-1)
     labels = np.full(video_length, not_visible_cls)
-    for i in range(len(label["time_stamps"])-1):
+    for i in range(len(label["time_stamps"])):
         visibility_status = not visibility_status
         if visibility_status:
-            labels[label["time_stamps"][i]:label["time_stamps"][i+1]] = video_cls
-
+            if i != len(label["time_stamps"])-1:
+                labels[label["time_stamps"][i]:label["time_stamps"][i+1]] = video_cls
+            else:
+                labels[label["time_stamps"][i]:] = video_cls
     return np.asarray(labels)
 
 
@@ -112,9 +112,9 @@ def n_to_n_loader(data_path: str, label_map: Dict, limit: int = None, load_video
 
     nb_labels = len(labels)
     data = []
-    for i, label in enumerate(labels):
+    for i, label in enumerate(labels, start=1):
         video_path = os.path.join(data_path, label["file_path"])
-        msg = f"Loading data {video_path}    ({i}/{len(nb_labels)})"
+        msg = f"Loading data {video_path}    ({i}/{nb_labels})"
         print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
 
         assert os.path.isfile(video_path), f"Video {video_path} is missing"
@@ -141,8 +141,8 @@ def n_to_n_loader(data_path: str, label_map: Dict, limit: int = None, load_video
             data.append([np.asarray(video), label])
         else:
             data.append([video_path, label])
-        if limit and i >= limit:
+        if limit and i == limit:
             break
 
-    data = np.asarray(data)
+    data = np.asarray(data, dtype=object)
     return data

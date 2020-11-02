@@ -70,5 +70,5 @@ class Transformer(nn.Module):
         if not ModelConfig.USE_N_TO_N:
             x = x.view(batch_size, -1)
             x = self.dense(x)  # Outputs (batch_size, nb_classes)
-        x = F.log_softmax(x, dim=-1)
+        # x = F.log_softmax(x, dim=-1)
         return x
