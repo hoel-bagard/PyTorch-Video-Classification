@@ -12,7 +12,7 @@ from torchsummary import summary
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
-from src.networks.network_utils import build_model
+from src.networks.build_network import build_model
 from src.train import train
 import src.dataset.transforms as transforms
 

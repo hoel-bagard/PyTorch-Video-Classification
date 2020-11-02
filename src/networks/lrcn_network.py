@@ -8,37 +8,42 @@ from src.networks.layers import (
     DarknetConv,
     DarknetBlock
 )
+from .network_utils import (
+    layer_init,
+    get_cnn_output_size
+)
 from config.model_config import ModelConfig
 
 
 class CNN(nn.Module):
     def __init__(self):
-        super(CNN, self).__init__()
+        super().__init__()
+        self.output_size = ModelConfig.OUTPUT_CLASSES
         channels = ModelConfig.CHANNELS
+        sizes = ModelConfig.SIZES
+        strides = ModelConfig.STRIDES
 
-        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, ModelConfig.CHANNELS[0], 3)
-        self.blocks = nn.Sequential(*[DarknetBlock(channels[i-1], channels[i], ModelConfig.NB_BLOCKS[i-1])
-                                      for i in range(1, len(channels))])
+        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0],
+                                      padding=ModelConfig.PADDINGS[0])
+        self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i],
+                                                  padding=ModelConfig.PADDINGS[i])
+                                    for i in range(1, len(channels))])
 
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-                m.weight.data.normal_(0, math.sqrt(2. / n))
-            elif isinstance(m, nn.BatchNorm2d):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
+        self.apply(layer_init)
 
     def forward(self, inputs):
         x = self.first_conv(inputs)
         for block in self.blocks:
             x = block(x)
+        x = torch.flatten(x, start_dim=1)
         return x
 
 
 class LRCN(nn.Module):
     def __init__(self, hidden_size: int = 60, num_layers: int = 5):
-        super(LRCN, self).__init__()
+        super().__init__()
         self.cnn = CNN()
+        cnn_output_size = get_cnn_output_size()
 
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.num_layers = num_layers
@@ -46,7 +51,7 @@ class LRCN(nn.Module):
 
         self.hidden_cell = (torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device),
                             torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device))
-        self.lstm = nn.LSTM(576, hidden_size, num_layers, batch_first=True)
+        self.lstm = nn.LSTM(cnn_output_size, self.hidden_size, num_layers, batch_first=True)
         self.dense = nn.Linear(hidden_size, ModelConfig.OUTPUT_CLASSES)
 
     def forward(self, inputs):
@@ -57,10 +62,7 @@ class LRCN(nn.Module):
         x, self.hidden_cell = self.lstm(x, self.hidden_cell)
         if not ModelConfig.USE_N_TO_N:
             x = x[:, -1]
-            x = self.dense(x)
-        else:
-            print("N to n not implemented for LRCN")
-            exit()
+        x = self.dense(x)
         # F.log_softmax(x, dim=-1)
         return x
 

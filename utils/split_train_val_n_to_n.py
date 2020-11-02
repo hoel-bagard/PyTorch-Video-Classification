@@ -10,10 +10,8 @@ def main():
     parser.add_argument('--split', type=float, default=0.85, help='Split percentage')
     args = parser.parse_args()
 
-
-    print("THe way it's implemented, splitting is done by video and not by subfolder...")
-    exit()
-
+    print("The way it's implemented, splitting is done by video and not by subfolder...")
+    # exit()
 
     assert 0 < args.split and args.split < 1, "Split value must be between 0 and 1"
 
@@ -50,8 +48,8 @@ def main():
 
     # Move videos to Validation folder
     for old_path, new_path in videos_to_move.items():
-        os.makedirs(new_path, exist_ok=True)
-        shutil.move(old_path, new_path)
+        os.makedirs(os.path.dirname(new_path), exist_ok=True)
+        shutil.move(old_path, os.path.dirname(new_path))
 
     # Delete old train labels file
     os.remove(train_label_file_path)

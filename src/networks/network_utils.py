@@ -3,36 +3,7 @@ import math
 import torch
 import torch.nn as nn
 
-from .lrcn_network import LRCN
-from .transformer_network import Transformer
-
-
-def build_model(name: str, model_path: str = None, eval: bool = False):
-    """
-    Creates model corresponding to the given name.
-    Args:
-        name: Name of the model to create, must be one of the implemented models
-        model_path: If given, then the weights will be load that checkpoint
-        eval: Whether the model will be used for evaluation or not
-    Returns:
-        model: PyTorch model
-    """
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-    assert name in ("LRCN", "Transformer")
-    if name == "LRCN":
-        model = LRCN()
-    elif name == "Transformer":
-        model = Transformer()
-
-    if model_path is not None:
-        model.load_state_dict(torch.load(model_path))
-    if eval:
-        model.eval()
-
-    model = model.float()
-    model.to(device)
-    return model
+from config.model_config import ModelConfig
 
 
 def layer_init(layer, weight_gain: float = 1, bias_const: float = 0,
@@ -61,3 +32,14 @@ def layer_init(layer, weight_gain: float = 1, bias_const: float = 0,
     elif isinstance(layer, nn.BatchNorm2d):
         layer.weight.data.fill_(1)
         layer.bias.data.zero_()
+
+
+def get_cnn_output_size():
+    width, height = ModelConfig.IMAGE_SIZES
+    for kernel_size, stride, padding in zip(ModelConfig.SIZES, ModelConfig.STRIDES, ModelConfig.PADDINGS):
+        width = ((width - kernel_size + 2*padding) // stride) + 1
+
+    for kernel_size, stride, padding in zip(ModelConfig.SIZES, ModelConfig.STRIDES, ModelConfig.PADDINGS):
+        height = ((height - kernel_size + 2*padding) // stride) + 1
+
+    return width*height*ModelConfig.CHANNELS[-1]
