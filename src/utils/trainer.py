@@ -3,13 +3,12 @@ import time
 import torch
 
 from config.model_config import ModelConfig
-from src.networks.network import LRCN
 
 
 class Trainer:
-    def __init__(self, model: LRCN, loss_fn,
+    def __init__(self, model: torch.nn.Module, loss_fn,
                  train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader):
-        self.model: LRCN = model
+        self.model = model
         self.loss_fn = loss_fn
         self.optimizer: torch.optim.Optimizer = torch.optim.Adam(model.parameters(),
                                                                  lr=ModelConfig.LR, weight_decay=ModelConfig.REG_FACTOR)
@@ -28,7 +27,7 @@ class Trainer:
             self.optimizer.zero_grad()
 
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
-            if ModelConfig.MODEL == "LRCN":
+            if ModelConfig.NETWORK == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
@@ -56,7 +55,7 @@ class Trainer:
             step_start_time = time.time()
 
             inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
-            if ModelConfig.MODEL == "LRCN":
+            if ModelConfig.NETWORK == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)

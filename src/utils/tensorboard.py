@@ -29,7 +29,7 @@ class TensorBoard():
 
         self.train_tb_writer = SummaryWriter(os.path.join(DataConfig.TB_DIR, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(DataConfig.TB_DIR, "Validation"))
-        if ModelConfig.MODEL != "LRCN":
+        if ModelConfig.NETWORK != "LRCN":
             self.train_tb_writer.add_graph(model, (torch.empty(ModelConfig.BATCH_SIZE, ModelConfig.VIDEO_SIZE,
                                                    1 if ModelConfig.USE_GRAY_SCALE else 3,
                                                    ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1],
@@ -48,7 +48,7 @@ class TensorBoard():
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         # Get some data
         batch = next(iter(dataloader))
-        if ModelConfig.MODEL == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
+        if ModelConfig.NETWORK == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
         else:
@@ -56,17 +56,17 @@ class TensorBoard():
 
         # Get some predictions
         predictions = self.model(videos.to(self.device))
-        if ModelConfig.MODEL == "LRCN":
+        if ModelConfig.NETWORK == "LRCN":
             predictions, videos = predictions[:self.max_outputs], videos[:self.max_outputs]
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
 
         # Write prediction on some images and add them to TensorBoard
         out_imgs = draw_pred(videos, predictions, labels)
         for image_index, out_img in enumerate(out_imgs):
-            if ModelConfig.USE_GRAY_SCALE:
+            # If opencv resizes the image, it removes the channel dimension
+            if out_img.ndim == 2:
                 out_img = np.expand_dims(out_img, 0)
-            else:
-                out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch)
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):
@@ -81,7 +81,7 @@ class TensorBoard():
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         # Get some data
         batch = next(iter(dataloader))
-        if ModelConfig.MODEL == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
+        if ModelConfig.NETWORK == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
         else:
@@ -89,7 +89,7 @@ class TensorBoard():
 
         # Get some predictions
         predictions = self.model(videos.to(self.device))
-        if ModelConfig.MODEL == "LRCN":
+        if ModelConfig.NETWORK == "LRCN":
             predictions, videos = predictions[:1], videos[:1]
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
 

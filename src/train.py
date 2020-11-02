@@ -10,14 +10,18 @@ from config.data_config import DataConfig
 from src.utils.trainer import Trainer
 from src.utils.tensorboard import TensorBoard
 from src.utils.metrics import Metrics
+from src.losses import CE_Loss
 
 
 def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader):
-    loss_fn = nn.NLLLoss()  # nn.CrossEntropyLoss()
+    if ModelConfig.USE_N_TO_N:
+        loss_fn = CE_Loss()
+    else:
+        loss_fn = nn.CrossEntropyLoss()  # nn.NLLLoss()
     trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader)
     scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
     if DataConfig.USE_TB:
-        metrics = Metrics(model, loss_fn, train_dataloader, val_dataloader)
+        metrics = Metrics(model, loss_fn, train_dataloader, val_dataloader, max_batches=None)
         tensorboard = TensorBoard(model, metrics)
 
     best_loss = 1000

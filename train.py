@@ -12,7 +12,7 @@ from torchsummary import summary
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.dataset.dataset import Dataset
-from src.networks.build_network import build_model
+from src.networks.network_utils import build_model
 from src.train import train
 import src.dataset.transforms as transforms
 
@@ -70,7 +70,7 @@ def main():
                             ]))
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                    shuffle=True, num_workers=ModelConfig.WORKERS,
-                                                   drop_last=ModelConfig.MODEL == "LRCN")
+                                                   drop_last=ModelConfig.NETWORK == "LRCN")
 
     print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
 
@@ -85,7 +85,7 @@ def main():
                           ]))
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                  shuffle=False, num_workers=ModelConfig.WORKERS,
-                                                 drop_last=ModelConfig.MODEL == "LRCN")
+                                                 drop_last=ModelConfig.NETWORK == "LRCN")
     print("Validation data loaded" + ' ' * (os.get_terminal_size()[0] - 22))
 
     print(f"\nLoaded {len(train_dataloader.dataset)} train data and",
@@ -93,7 +93,7 @@ def main():
 
     model = build_model(ModelConfig.NETWORK)
     # The summary does not work with an LSTM for some reason
-    if ModelConfig.MODEL != "LRCN":
+    if ModelConfig.NETWORK != "LRCN":
         summary(model, (ModelConfig.VIDEO_SIZE, 1 if ModelConfig.USE_GRAY_SCALE else 3,
                         ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1]))
 

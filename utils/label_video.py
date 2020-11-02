@@ -116,7 +116,7 @@ def main():
     parser = argparse.ArgumentParser("Tool to help label videos frame by frame")
     parser.add_argument("data_path", help='Path to the dataset')
     parser.add_argument("--defect", default=None, type=str,
-                        help='If you wish to label one defect in particuler (for exemple: "g1000")')
+                        help='If you wish to label one defect in particular (for exemple: "g1000")')
     parser.add_argument("--output_path", default=None, type=str, help='Path to where the label file will be created')
     args = parser.parse_args()
 

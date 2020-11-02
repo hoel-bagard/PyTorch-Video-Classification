@@ -61,7 +61,8 @@ class LRCN(nn.Module):
         else:
             print("N to n not implemented for LRCN")
             exit()
-        return F.log_softmax(x, dim=-1)
+        # F.log_softmax(x, dim=-1)
+        return x
 
     def reset_lstm_state(self, batch_size: int = ModelConfig.BATCH_SIZE):
         """

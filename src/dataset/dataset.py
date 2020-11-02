@@ -49,7 +49,7 @@ class Dataset(torch.utils.data.Dataset):
         else:
             cap = cv2.VideoCapture(self.labels[i, 0])
             frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-            start = random.randint(0, frame_count-2 - ModelConfig.VIDEO_SIZE)
+            start = random.randint(0, frame_count-1 - ModelConfig.VIDEO_SIZE)
             cap.set(cv2.CAP_PROP_POS_FRAMES, start)
 
             video = []
@@ -67,10 +67,14 @@ class Dataset(torch.utils.data.Dataset):
                     else:
                         frame = np.zeros((ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1], 3), np.uint8)
                 video.append(frame)
+
             cap.release()
             video = np.asarray(video)
 
-        label = int(self.labels[i, 1])
+        if ModelConfig.USE_N_TO_N:
+            label = self.labels[i, 1][start:start+ModelConfig.VIDEO_SIZE]
+        else:
+            label = int(self.labels[i, 1])
         sample = {"video": video, "label": label}
 
         if self.transform:
