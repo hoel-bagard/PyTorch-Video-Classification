@@ -58,7 +58,7 @@ class Metrics:
         Returns:
             per_class_acc: An array containing the accuracy for each class
         """
-        per_class_acc = [self.cm[i, i] / np.sum(self.cm[i]) for i in range(len(self.cm))]
+        per_class_acc = [self.cm[i, i] / max(1, np.sum(self.cm[i])) for i in range(len(self.cm))]
         return per_class_acc
 
     def get_confusion_matrix(self) -> np.ndarray:
