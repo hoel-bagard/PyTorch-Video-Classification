@@ -1,5 +1,6 @@
 import argparse
 import os
+import pathlib
 import glob
 import json
 
@@ -42,7 +43,7 @@ def query_yes_no(question: str, default: str = "yes") -> True:
 def check_entry(entries, video_path):
     """
     Check if there is already an entry in the json file for a given video.
-    Note: be careful with relative paths
+    Note: be careful with relative paths / Windows format paths
     Args:
         entries: Content of the json file.
         video_path: path of the video
@@ -136,9 +137,11 @@ def main():
         existing_data = {"entries": []}
         entries = existing_data["entries"]
 
-    file_list = glob.glob(os.path.join(args.data_path, "**", "*.avi"), recursive=True)
+    file_list = glob.glob(os.path.join(args.data_path, "**", "*.mp4"), recursive=True)  # used to be .avi
     nb_videos: int = len(file_list)
     for i, video_path in enumerate(file_list):
+        video_subpath = os.path.join(*video_path.split(os.path.sep)[-5:])  # Keeps only the "constant" part
+        video_subpath = pathlib.PureWindowsPath(video_subpath).as_posix()  # Just in case the labeller is using Windows
 
         # When labelling only one type of defect, skip the other ones
         if args.defect and args.defect not in video_path:
@@ -147,7 +150,7 @@ def main():
         print(f"Processing video {video_path} ({i+1}/{nb_videos})", flush=True)
 
         # Check if it is already in the json
-        if os.path.isfile(output_path) and check_entry(entries, video_path):
+        if os.path.isfile(output_path) and check_entry(entries, video_subpath):
             print(f"\nThere is already an entry for {video_path}, proceeding to next video")
             continue
 
@@ -158,7 +161,7 @@ def main():
         label_time_stamps = make_video_timestamps(video_path)
         if label_time_stamps != -1:
             json_entry = {
-                            "file_path": video_path,
+                            "file_path": video_subpath,
                             "time_stamps": label_time_stamps
                         }
             entries.append(json_entry)
