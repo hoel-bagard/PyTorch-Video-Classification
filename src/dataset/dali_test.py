@@ -1,10 +1,16 @@
 import os
 import json
-from typing import Dict
 import tempfile
+from typing import (
+    Dict,
+    List
+)
 
 import cv2
-import numpy as np
+import nvidia.dali.ops as ops
+import nvidia.dali.types as types
+from nvidia.dali.pipeline import Pipeline
+from nvidia.dali.plugin import pytorch
 
 from config.model_config import ModelConfig
 
@@ -84,10 +90,13 @@ class VideoReaderPipeline(Pipeline):
     def __init__(self, batch_size, sequence_length, num_threads, device_id, file_list, crop_size, mode: str = "Train"):
         super(VideoReaderPipeline, self).__init__(batch_size, num_threads, device_id, seed=12)
         self.reader = ops.VideoReader(device="gpu", file_list=file_list, sequence_length=sequence_length,
-                                      normalized=False, random_shuffle=(mode == "Train"), initial_fill=4*ModelConfig.BATCH_SIZE
-                                      image_type=types.RGB (Also depends), dtype=types.UINT8,
-                                      file_list_frame_num=frame_num_based_labels, enable_frame_num=True, enable_timestamps=True,
-                                      pad_last_batch=True "Check how this one works")
+                                      normalized=False, random_shuffle=(mode == "Train"),
+                                      initial_fill=4*ModelConfig.BATCH_SIZE,  # Size of the buffer for shuffling.
+                                      image_type=types.GRAY if ModelConfig.USE_GRAY_SCALE else types.RGB,
+                                      dtype=types.UINT8,
+                                      file_list_frame_num=True, enable_frame_num=True, enable_timestamps=True,
+                                      pad_last_batch=False)  # If True, pads the shard by repeating the last sample.
+
         # self.crop = ops.Crop(device="gpu", crop=crop_size, dtype=types.FLOAT)
         # self.uniform = ops.Uniform(range=(0.0, 1.0))
         # self.transpose = ops.Transpose(device="gpu", perm=[3, 0, 1, 2])
@@ -100,9 +109,26 @@ class VideoReaderPipeline(Pipeline):
 
 
 class DALILoader():
-    def __init__(self, batch_size, file_list, sequence_length, crop_size):
-        self.pipeline = VideoReaderPipeline(batch_size=batch_size,
-                                            sequence_length=sequence_length,
+    def __init__(self, data_path: str, label_map: Dict, limit: int = None,
+                 crop_size: List[int, int] = [256, 256]):
+        """
+        Args:
+            data_path: Path to the root folder of the dataset.
+                       This folder is expected to contain subfolders for each class, with the videos inside.
+                       It should also contain a label.json file with the labels (file paths and time stamps)
+            label_map: dictionarry mapping an int to a class
+            limit (int, optional): If given then the number of elements for each class in the dataset
+                                   will be capped to this number
+        """
+
+        # Make list of files and associated labels
+        label_list = dali_n_to_n_file_list(data_path, label_map, limit=limit)
+        tf = tempfile.NamedTemporaryFile()
+        tf.write(str.encode(label_list))
+        tf.flush()
+        file_list = tf.name
+        self.pipeline = VideoReaderPipeline(batch_size=ModelConfig.BATCH_SIZE,
+                                            sequence_length=ModelConfig.VIDEO_SIZE,
                                             num_threads=2,
                                             device_id=0,
                                             file_list=file_list,
@@ -113,6 +139,7 @@ class DALILoader():
                                                          ["data"],
                                                          reader_name="Reader",
                                                          fill_last_batch=False,
+                                                         last_batch_padded=True,
                                                          auto_reset=True)
 
     def __len__(self):
@@ -120,33 +147,3 @@ class DALILoader():
 
     def __iter__(self):
         return self.dali_iterator.__iter__()
-
-
-
-
-
-def get_data_loader(data_path: str, label_map: Dict, limit: int = None):
-    """
-    Returns data loader for the given dataset.
-    Args:
-        data_path: Path to the root folder of the dataset.
-                   This folder is expected to contain subfolders for each class, with the videos inside.
-                   It should also contain a label.json file with the labels (file paths and time stamps)
-        label_map: dictionarry mapping an int to a class
-        limit (int, optional): If given then the number of elements for each class in the dataset
-                            will be capped to this number
-    Return:
-        ???
-    """
-    label_list = dali_n_to_n_file_list(data_path, label_map, limit=limit)
-    tf = tempfile.NamedTemporaryFile()
-    tf.write(str.encode(label_list))
-    tf.flush()
-
-    loader = DALILoader(ModelConfig.BATCH_SIZE,
-                        tf.name,
-                        args.frames,
-                        args.crop_size)
-
-    # do stuff with the loader here
-
