@@ -18,7 +18,7 @@ class ModelConfig:
     PADDINGS = [1, 1, 1, 1, 1, 1]
     NB_BLOCKS = [1, 2, 2, 2, 1]
     VIDEO_SIZE = 20
-    USE_GRAY_SCALE = False
+    USE_GRAY_SCALE = False  # Cannot be used if using the DALI dataloader
     IMAGE_SIZES = (256, 256)  # All images will be resized to this size
     OUTPUT_CLASSES = 101
     WORKERS = 8   # Number of workers for dataloader

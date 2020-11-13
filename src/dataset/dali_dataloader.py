@@ -1,10 +1,7 @@
 import os
 import json
 import tempfile
-from typing import (
-    Dict,
-    List
-)
+from typing import Dict
 
 import cv2
 import nvidia.dali.ops as ops
@@ -70,12 +67,12 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
         else:
             visibility_status = True
 
-        for i in range(len(label["time_stamps"])):
+        for j in range(len(label["time_stamps"])):
             video_extract_cls = video_cls if visibility_status else not_visible_cls
-            if i != len(label["time_stamps"])-1:
-                beginning, end = label["time_stamps"][i], label["time_stamps"][i+1]
+            if j != len(label["time_stamps"])-1:
+                beginning, end = label["time_stamps"][j], label["time_stamps"][j+1]
             else:
-                beginning, end = label["time_stamps"][i], video_length
+                beginning, end = label["time_stamps"][j], video_length
 
             # test_label.mp4 1 0 100 is interpreted as applying label 1 from frame number 0 to 100(excluding).
             label_list += f"{video_path} {video_extract_cls} {beginning} {end}\n"
@@ -83,34 +80,33 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
         if limit and i == limit:
             break
 
+    print("\nFinished reading labels")
     return label_list
 
 
 class VideoReaderPipeline(Pipeline):
-    def __init__(self, batch_size, sequence_length, num_threads, device_id, file_list, crop_size, mode: str = "Train"):
+    def __init__(self, batch_size, sequence_length, num_threads, device_id, file_list, mode: str = "Train"):
         super(VideoReaderPipeline, self).__init__(batch_size, num_threads, device_id, seed=12)
         self.reader = ops.VideoReader(device="gpu", file_list=file_list, sequence_length=sequence_length,
-                                      normalized=False, random_shuffle=(mode == "Train"),
+                                      random_shuffle=(mode == "Train"),
                                       initial_fill=4*ModelConfig.BATCH_SIZE,  # Size of the buffer for shuffling.
-                                      image_type=types.GRAY if ModelConfig.USE_GRAY_SCALE else types.RGB,
+                                      image_type=types.RGB,
                                       dtype=types.UINT8,
-                                      file_list_frame_num=True, enable_frame_num=True, enable_timestamps=True,
+                                      file_list_frame_num=True,
+                                      enable_frame_num=False, enable_timestamps=False,
                                       pad_last_batch=False)  # If True, pads the shard by repeating the last sample.
 
-        # self.crop = ops.Crop(device="gpu", crop=crop_size, dtype=types.FLOAT)
-        # self.uniform = ops.Uniform(range=(0.0, 1.0))
-        # self.transpose = ops.Transpose(device="gpu", perm=[3, 0, 1, 2])
+        self.transpose = ops.Transpose(device="gpu", perm=[0, 3, 1, 2])
 
     def define_graph(self):
-        input = self.reader(name="Reader")
-        # cropped = self.crop(input, crop_pos_x=self.uniform(), crop_pos_y=self.uniform())
-        # output = self.transpose(cropped)
-        return input
+        videos, labels = self.reader(name="Reader")
+        videos = self.transpose(videos)
+        videos = videos / 255.0
+        return videos, labels
 
 
-class DALILoader():
-    def __init__(self, data_path: str, label_map: Dict, limit: int = None,
-                 crop_size: List[int, int] = [256, 256]):
+class DALILoader:
+    def __init__(self, data_path: str, label_map: Dict, limit: int = None):
         """
         Args:
             data_path: Path to the root folder of the dataset.
@@ -131,15 +127,15 @@ class DALILoader():
                                             sequence_length=ModelConfig.VIDEO_SIZE,
                                             num_threads=2,
                                             device_id=0,
-                                            file_list=file_list,
-                                            crop_size=crop_size)
+                                            file_list=file_list)
         self.pipeline.build()
         self.epoch_size = self.pipeline.epoch_size("Reader")
         self.dali_iterator = pytorch.DALIGenericIterator(self.pipeline,
-                                                         ["data"],
+                                                         ["video", "label"],
                                                          reader_name="Reader",
                                                          fill_last_batch=False,
-                                                         last_batch_padded=True,
+                                                         # last_batch_padded=True,
+                                                         dynamic_shape=True,  # TODO: DALI's black magic...
                                                          auto_reset=True)
 
     def __len__(self):

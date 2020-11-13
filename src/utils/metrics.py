@@ -1,5 +1,8 @@
 import itertools
-from typing import List
+from typing import (
+    List,
+    Union
+)
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,7 +14,7 @@ from config.data_config import DataConfig
 
 
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn, train_dataloader: torch.utils.data.DataLoader,
+    def __init__(self, model: nn.Module, loss_fn, train_dataloader: Union[torch.utils.data.DataLoader, object],  # Put the DALILoader here ?
                  val_dataloader: torch.utils.data.DataLoader, max_batches: int = 10):
         self.model = model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -28,6 +31,9 @@ class Metrics:
         """
         self.cm = np.zeros((ModelConfig.OUTPUT_CLASSES, ModelConfig.OUTPUT_CLASSES))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
+            if DataConfig.DALI:
+                batch = batch[0]
+                batch["label"] = batch["label"].repeat(*batch["video"].shape[:2])
             imgs, labels_batch = batch["video"].float(), batch["label"].cpu().detach().numpy()
             predictions_batch = self.model(imgs.to(self.device))
             predictions_batch = torch.nn.functional.softmax(predictions_batch, dim=-1)

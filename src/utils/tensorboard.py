@@ -1,5 +1,6 @@
 import os
 
+from einops import rearrange
 import numpy as np
 import torch
 import torch.nn as nn
@@ -48,6 +49,9 @@ class TensorBoard():
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         # Get some data
         batch = next(iter(dataloader))
+        if DataConfig.DALI:
+            batch = batch[0]
+            batch["label"] = batch["label"].repeat(*batch["video"].shape[:2])
         if ModelConfig.NETWORK == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
@@ -62,11 +66,13 @@ class TensorBoard():
 
         # Write prediction on some images and add them to TensorBoard
         out_imgs = draw_pred(videos, predictions, labels)
+
+        print(f"Out imgs shape: {out_imgs.shape}")
         for image_index, out_img in enumerate(out_imgs):
             # If opencv resizes the image, it removes the channel dimension
             if out_img.ndim == 2:
-                out_img = np.expand_dims(out_img, 0)
-            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+                out_img = np.expand_dims(out_img, -1)
+            out_img = rearrange(out_img, 'w h c -> c w h')
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch)
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):
@@ -81,6 +87,8 @@ class TensorBoard():
         tb_writer = self.train_tb_writer if mode == "Train" else self.val_tb_writer
         # Get some data
         batch = next(iter(dataloader))
+        if DataConfig.DALI:
+            batch = batch[0]
         if ModelConfig.NETWORK == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])

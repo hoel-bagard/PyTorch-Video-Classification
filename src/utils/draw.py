@@ -35,11 +35,15 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
         predictions = predictions[:, frame_to_keep]
         labels = labels[:, frame_to_keep]
 
+    # TODO: remove this temp fix and do it properly
+    if not size:
+        size = ModelConfig.IMAGE_SIZES
+
     new_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
         img = np.asarray(img * 255.0, dtype=np.uint8)
-        if size:
-            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+
+        img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
 
         # Just print the top 3 classes
         # Gets indices of top 3 pred
