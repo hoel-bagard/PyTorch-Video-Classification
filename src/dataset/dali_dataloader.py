@@ -96,10 +96,14 @@ class VideoReaderPipeline(Pipeline):
                                       enable_frame_num=False, enable_timestamps=False,
                                       pad_last_batch=False)  # If True, pads the shard by repeating the last sample.
 
+        self.rng = ops.CoinFlip()
+        self.rng2 = ops.CoinFlip()
+        self.flip = ops.Flip(device="gpu")
         self.transpose = ops.Transpose(device="gpu", perm=[0, 3, 1, 2])
 
     def define_graph(self):
         videos, labels = self.reader(name="Reader")
+        videos = self.flip(videos, horizontal=self.rng(), vertical=self.rng2())
         videos = self.transpose(videos)
         videos = videos / 255.0
         return videos, labels

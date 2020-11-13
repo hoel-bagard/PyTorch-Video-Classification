@@ -24,7 +24,7 @@ def main():
 
         # Crop (using the same function as in train)
         # frame = crop(frame, top=900, bottom=400)    # Used for September 2020 data
-        # frame = crop(frame, top=200, bottom=1100)    # Used for October 2020 data, needs to be adjusted on a per folder basis
+        # frame = crop(frame, top=200, bottom=1100)    # October 2020 data, needs to be adjusted on a per folder basis
         frame = np.asarray(frame, dtype=np.uint8)
 
         # To grayscale

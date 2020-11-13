@@ -8,14 +8,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from nvidia.dali.plugin import pytorch
 
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
 
 
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn, train_dataloader: Union[torch.utils.data.DataLoader, object],  # Put the DALILoader here ?
-                 val_dataloader: torch.utils.data.DataLoader, max_batches: int = 10):
+    def __init__(self, model: nn.Module, loss_fn: nn.Module,
+                 train_dataloader: Union[torch.utils.data.DataLoader, pytorch.DALIGenericIterator],
+                 val_dataloader: Union[torch.utils.data.DataLoader, pytorch.DALIGenericIterator],
+                 max_batches: int = 10):
         self.model = model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

@@ -67,7 +67,6 @@ class TensorBoard():
         # Write prediction on some images and add them to TensorBoard
         out_imgs = draw_pred(videos, predictions, labels)
 
-        print(f"Out imgs shape: {out_imgs.shape}")
         for image_index, out_img in enumerate(out_imgs):
             # If opencv resizes the image, it removes the channel dimension
             if out_img.ndim == 2:

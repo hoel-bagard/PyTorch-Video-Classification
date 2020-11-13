@@ -56,7 +56,9 @@ def main():
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
 
     if DataConfig.DALI:
-        train_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.LABEL_MAP, limit=args.limit)
+        train_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Train"),
+                                      DataConfig.LABEL_MAP,
+                                      limit=args.limit)
     else:
         train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
                                 limit=args.limit,
@@ -79,7 +81,9 @@ def main():
     print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
 
     if DataConfig.DALI:
-        val_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.LABEL_MAP, limit=args.limit)
+        val_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Validation"),
+                                    DataConfig.LABEL_MAP,
+                                    limit=args.limit)
     else:
         val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
                               limit=args.limit,
@@ -89,7 +93,7 @@ def main():
                                   # transforms.Resize(*ModelConfig.IMAGE_SIZES),
                                   transforms.Normalize(),
                                   transforms.ToTensor()
-                            ]))
+                              ]))
         val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
                                                      shuffle=False, num_workers=ModelConfig.WORKERS,
                                                      drop_last=ModelConfig.NETWORK == "LRCN")

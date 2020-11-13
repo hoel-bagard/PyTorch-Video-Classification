@@ -57,17 +57,18 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
 
                     # Metrics for the Train dataset
                     tensorboard.write_images(epoch, train_dataloader)
-                    # tensorboard.write_videos(epoch, train_dataloader)
-                    train_acc = tensorboard.write_metrics(epoch)
+                    # if epoch % (3*DataConfig.VAL_FREQ) == 0:
+                    #     tensorboard.write_videos(epoch, train_dataloader)
+                    # train_acc = tensorboard.write_metrics(epoch)
 
                     # Metrics for the Validation dataset
                     tensorboard.write_images(epoch, val_dataloader, mode="Validation")
                     if epoch % (3*DataConfig.VAL_FREQ) == 0:
                         tensorboard.write_videos(epoch, val_dataloader, mode="Validation")
-                    val_acc = tensorboard.write_metrics(epoch, mode="Validation")
+                    # val_acc = tensorboard.write_metrics(epoch, mode="Validation")
 
-                    print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}",
-                          end='\r', flush=True)
+                    # print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}",
+                    #       end='\r', flush=True)
 
                 print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s",
                       flush=True)
