@@ -4,6 +4,7 @@ import tempfile
 from typing import Dict
 
 import cupy as cp
+from cupyx.scipy import ndimage
 import cv2
 import numpy as np
 import nvidia.dali.ops as ops
@@ -87,9 +88,11 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
 
 
 
-# Random function that mixes 2 images using cupy
-def edit_images(image1, image2):
-    assert image1.shape == image2.shape
+def cupy_data_aug(image):
+    """For now everything is in one function"""
+    ndimage.rotate(image, 180)    # TODO: Need to specify the axes
+
+
     h, w, c = image1.shape
     y, x = cp.ogrid[0:h, 0:w]
     mask = (x - w / 2) ** 2 + (y - h / 2) ** 2 > h * w / 9
@@ -98,6 +101,37 @@ def edit_images(image1, image2):
     result2 = cp.copy(image2)
     result2[mask] = image1[mask]
     return result1, result2
+
+
+class Rotate180(object):
+    """ Randomly rotate the video by 180 degrees """
+
+    def __call__(self, sample):
+        video, label = sample["video"], sample["label"]
+        if random.random() > 0.5:
+            for i in range(len(video)):
+                frame = cv2.rotate(video[i], cv2.ROTATE_180)
+
+                # temp fix for gray scale
+                if len(frame.shape) == 2:
+                    frame = np.expand_dims(frame, -1)
+                video[i] = frame
+
+        return {"video": video, "label": label}
+
+
+class Noise(object):
+    """ Add random noise to the image """
+
+    def __call__(self, sample):
+        video, label = sample["video"], sample["label"]
+        noise_offset = (torch.rand(video[0].shape)-0.5)*0.05
+        noise_scale = (torch.rand(video[0].shape) * 0.2) + 0.9
+
+        video = video * noise_scale + noise_offset
+        video = torch.clamp(video, 0, 1)
+
+        return {"video": video, "label": label}
 
 
 class LoadingPipeline(Pipeline):
