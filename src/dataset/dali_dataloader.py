@@ -3,7 +3,9 @@ import json
 import tempfile
 from typing import Dict
 
+import cupy as cp
 import cv2
+import numpy as np
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
 from nvidia.dali.pipeline import Pipeline
@@ -84,9 +86,25 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
     return label_list
 
 
-class VideoReaderPipeline(Pipeline):
-    def __init__(self, batch_size, sequence_length, num_threads, device_id, file_list, mode: str = "Train"):
-        super(VideoReaderPipeline, self).__init__(batch_size, num_threads, device_id, seed=12)
+
+# Random function that mixes 2 images using cupy
+def edit_images(image1, image2):
+    assert image1.shape == image2.shape
+    h, w, c = image1.shape
+    y, x = cp.ogrid[0:h, 0:w]
+    mask = (x - w / 2) ** 2 + (y - h / 2) ** 2 > h * w / 9
+    result1 = cp.copy(image1)
+    result1[mask] = image2[mask]
+    result2 = cp.copy(image2)
+    result2[mask] = image1[mask]
+    return result1, result2
+
+
+class LoadingPipeline(Pipeline):
+    """Common Pipeline"""
+    def __init__(self, batch_size: int, sequence_length: int, num_threads: int, device_id: int,
+                 file_list: str, mode: str = "Train"):
+        super().__init__(batch_size, num_threads, device_id, seed=1)
         self.reader = ops.VideoReader(device="gpu", file_list=file_list, sequence_length=sequence_length,
                                       random_shuffle=(mode == "Train"),
                                       initial_fill=4*ModelConfig.BATCH_SIZE,  # Size of the buffer for shuffling.
@@ -96,21 +114,52 @@ class VideoReaderPipeline(Pipeline):
                                       enable_frame_num=False, enable_timestamps=False,
                                       pad_last_batch=False)  # If True, pads the shard by repeating the last sample.
 
+        # TODO: add resize in the common preprocess ?
+        # self.resize = ops.Resize(THING HERE, device='gpu')
+        self.transpose = ops.Transpose(device="gpu", perm=[0, 3, 1, 2])
+
+    def load(self):
+        videos, labels = self.reader(name="reader")
+        return videos, labels
+
+    def common_preprocess(self, videos, labels):
+        videos_pytorch = self.transpose(videos)  # Channels first
+        videos_normalized = videos_pytorch / 255.0
+        return videos_normalized, labels
+
+
+class AugmentationPipeline(LoadingPipeline):
+    """PythonFuncPipeline"""
+    def __init__(self, batch_size: int, sequence_length: int, num_threads: int, device_id: int,
+                 file_list: str, mode: str = "Train"):
+        super().__init__(batch_size, sequence_length, num_threads, device_id, file_list, mode)
+        self.edit_images = ops.PythonFunction(function=edit_images, num_outputs=2, device='gpu')
         self.rng = ops.CoinFlip()
         self.rng2 = ops.CoinFlip()
         self.flip = ops.Flip(device="gpu")
-        self.transpose = ops.Transpose(device="gpu", perm=[0, 3, 1, 2])
 
     def define_graph(self):
-        videos, labels = self.reader(name="Reader")
+        videos, labels = self.load()
         videos = self.flip(videos, horizontal=self.rng(), vertical=self.rng2())
-        videos = self.transpose(videos)
-        videos = videos / 255.0
-        return videos, labels
+        res1, res2 = self.random_cupy_function(videos, labels)
+        videos_normalized, labels = self.common_preprocess(videos, labels)
+        return videos_normalized, labels
+
+
+class NoAugPipeline(LoadingPipeline):
+    """Pipeline without data augmentation, used for validation"""
+    def __init__(self, batch_size: int, sequence_length: int, num_threads: int, device_id: int,
+                 file_list: str, mode: str = "Validation"):
+        super().__init__(batch_size, sequence_length, num_threads, device_id, file_list, mode)
+
+    def define_graph(self):
+        videos, labels = self.load()
+        videos_normalized, labels = self.common_preprocess(videos, labels)
+        return videos_normalized, labels
 
 
 class DALILoader:
-    def __init__(self, data_path: str, label_map: Dict, limit: int = None):
+    def __init__(self, data_path: str, label_map: Dict, limit: int = None, mode: str = "Train"):
         """
         Args:
             data_path: Path to the root folder of the dataset.
@@ -119,7 +168,9 @@ class DALILoader:
             label_map: dictionarry mapping an int to a class
             limit (int, optional): If given then the number of elements for each class in the dataset
                                    will be capped to this number
+            mode: If Train the data augmentation will be applied, if Validation then there will be no data augmentation
         """
+        assert mode in ("Train", "Validation"), "Mode must be either 'Train' or 'Validation'"
 
         # Make list of files and associated labels
         label_list = dali_n_to_n_file_list(data_path, label_map, limit=limit)
@@ -127,12 +178,22 @@ class DALILoader:
         tf.write(str.encode(label_list))
         tf.flush()
         file_list = tf.name
-        self.pipeline = VideoReaderPipeline(batch_size=ModelConfig.BATCH_SIZE,
-                                            sequence_length=ModelConfig.VIDEO_SIZE,
-                                            num_threads=2,
-                                            device_id=0,
-                                            file_list=file_list)
+
+        # Build pipeline (with or without data augmentation depending on the mode)
+        if mode == "Train":
+            self.pipeline = AugmentationPipeline(batch_size=ModelConfig.BATCH_SIZE,
+                                                 sequence_length=ModelConfig.VIDEO_SIZE,
+                                                 num_threads=2,
+                                                 device_id=0,
+                                                 file_list=file_list)
+        elif mode == "Validation":
+            self.pipeline = NoAugPipeline(batch_size=ModelConfig.BATCH_SIZE,
+                                          sequence_length=ModelConfig.VIDEO_SIZE,
+                                          num_threads=2,
+                                          device_id=0,
+                                          file_list=file_list)
         self.pipeline.build()
+
         self.epoch_size = self.pipeline.epoch_size("Reader")
         self.dali_iterator = pytorch.DALIGenericIterator(self.pipeline,
                                                          ["video", "label"],
