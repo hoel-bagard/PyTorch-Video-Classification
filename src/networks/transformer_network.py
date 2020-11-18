@@ -42,7 +42,7 @@ class Transformer(nn.Module):
         nb_classes = ModelConfig.OUTPUT_CLASSES
         self.cnn_output_size = get_cnn_output_size()
         self.cnn = CNN()
-        self.transformer = TransformerLayer(self.cnn_output_size, nb_classes)
+        self.transformer = TransformerLayer(self.cnn_output_size, nb_classes, dim_feedforward=512, nlayers=2)
         self.dense = nn.Linear(ModelConfig.VIDEO_SIZE * nb_classes, nb_classes)
 
     def forward(self, inputs):

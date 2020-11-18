@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
 
-from src.networks.layers import DarknetConv
+from src.networks.layers import (
+    DarknetConv,
+    DarknetBlock
+)
 from .network_utils import (
     layer_init,
     get_cnn_output_size
@@ -19,9 +22,11 @@ class CNN(nn.Module):
 
         self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0],
                                       padding=ModelConfig.PADDINGS[0])
-        self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i],
-                                                  padding=ModelConfig.PADDINGS[i])
-                                    for i in range(1, len(channels))])
+        # self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i],
+        #                                           padding=ModelConfig.PADDINGS[i])
+        #                             for i in range(1, len(channels))])
+        self.blocks = nn.Sequential(*[DarknetBlock(channels[i-1], channels[i], ModelConfig.NB_BLOCKS[i-1])
+                                      for i in range(1, len(channels))])
 
         self.apply(layer_init)
 
