@@ -6,7 +6,6 @@ from typing import Dict
 import cupy as cp
 from cupyx.scipy import ndimage
 import cv2
-import numpy as np
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
 from nvidia.dali.pipeline import Pipeline
@@ -87,58 +86,41 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
     return label_list
 
 
-
-def cupy_data_aug(image):
+def cupy_data_aug(video):
     """For now everything is in one function"""
-    ndimage.rotate(image, 180)    # TODO: Need to specify the axes
+    # TODO: set batch_processing to True in the ops.PythonFunction
+    # TODO: in the documentation it is specified that the input must not be modified,
+    #       and in the example the resutls of operations are always assigned to new variables.
+    #       This is why the code looks a bit weird here (numbers of different variables....).
+    # Randomly does 180 degrees flipping
+    if cp.random.random_integers(0, 1):
+        # TODO: Need to check the axes (axes=(1, 0) for images)
+        rotated_video = ndimage.rotate(video, 180, axes=(2, 1), order=1)
+    else:
+        rotated_video = cp.copy(video)
 
+    # Adds some uniform noise
+    noise_scale = (cp.random.rand(*video.shape) * 0.2) + 0.9
+    noise_offset = (cp.random.rand(*video.shape)-0.5)*0.05  # TODO: Use the same noise for every frame? (video[0].shape)
+    # This function is called before the image is normalized to [0, 1], hence the *255
+    video_with_noise = rotated_video * noise_scale + 255*noise_offset
+    clipped_video = cp.clip(video_with_noise, a_min=0, a_max=255)
 
-    h, w, c = image1.shape
-    y, x = cp.ogrid[0:h, 0:w]
-    mask = (x - w / 2) ** 2 + (y - h / 2) ** 2 > h * w / 9
-    result1 = cp.copy(image1)
-    result1[mask] = image2[mask]
-    result2 = cp.copy(image2)
-    result2[mask] = image1[mask]
-    return result1, result2
+    # Randomly plays the video backward
+    if cp.random.random_integers(0, 1):
+        flipped_video = cp.flip(clipped_video, axis=0)
+    else:
+        flipped_video = cp.copy(clipped_video)
 
-
-class Rotate180(object):
-    """ Randomly rotate the video by 180 degrees """
-
-    def __call__(self, sample):
-        video, label = sample["video"], sample["label"]
-        if random.random() > 0.5:
-            for i in range(len(video)):
-                frame = cv2.rotate(video[i], cv2.ROTATE_180)
-
-                # temp fix for gray scale
-                if len(frame.shape) == 2:
-                    frame = np.expand_dims(frame, -1)
-                video[i] = frame
-
-        return {"video": video, "label": label}
-
-
-class Noise(object):
-    """ Add random noise to the image """
-
-    def __call__(self, sample):
-        video, label = sample["video"], sample["label"]
-        noise_offset = (torch.rand(video[0].shape)-0.5)*0.05
-        noise_scale = (torch.rand(video[0].shape) * 0.2) + 0.9
-
-        video = video * noise_scale + noise_offset
-        video = torch.clamp(video, 0, 1)
-
-        return {"video": video, "label": label}
+    return flipped_video
 
 
 class LoadingPipeline(Pipeline):
     """Common Pipeline"""
     def __init__(self, batch_size: int, sequence_length: int, num_threads: int, device_id: int,
-                 file_list: str, mode: str = "Train"):
-        super().__init__(batch_size, num_threads, device_id, seed=1)
+                 file_list: str, mode: str = "Train", exec_async=True, exec_pipelined=True):
+        super().__init__(batch_size, num_threads, device_id, seed=1,
+                         exec_async=exec_async, exec_pipelined=exec_pipelined)
         self.reader = ops.VideoReader(device="gpu", file_list=file_list, sequence_length=sequence_length,
                                       random_shuffle=(mode == "Train"),
                                       initial_fill=4*ModelConfig.BATCH_SIZE,  # Size of the buffer for shuffling.
@@ -153,7 +135,7 @@ class LoadingPipeline(Pipeline):
         self.transpose = ops.Transpose(device="gpu", perm=[0, 3, 1, 2])
 
     def load(self):
-        videos, labels = self.reader(name="reader")
+        videos, labels = self.reader(name="Reader")
         return videos, labels
 
     def common_preprocess(self, videos, labels):
@@ -165,9 +147,10 @@ class LoadingPipeline(Pipeline):
 class AugmentationPipeline(LoadingPipeline):
     """PythonFuncPipeline"""
     def __init__(self, batch_size: int, sequence_length: int, num_threads: int, device_id: int,
-                 file_list: str, mode: str = "Train"):
-        super().__init__(batch_size, sequence_length, num_threads, device_id, file_list, mode)
-        self.edit_images = ops.PythonFunction(function=edit_images, num_outputs=2, device='gpu')
+                 file_list: str, mode: str = "Train", exec_async=True, exec_pipelined=True):
+        super().__init__(batch_size, sequence_length, num_threads, device_id, file_list, mode,
+                         exec_async=exec_async, exec_pipelined=exec_pipelined)
+        self.cupy_data_aug = ops.PythonFunction(function=cupy_data_aug, num_outputs=1, device="gpu")
         self.rng = ops.CoinFlip()
         self.rng2 = ops.CoinFlip()
         self.flip = ops.Flip(device="gpu")
@@ -175,8 +158,8 @@ class AugmentationPipeline(LoadingPipeline):
     def define_graph(self):
         videos, labels = self.load()
         videos = self.flip(videos, horizontal=self.rng(), vertical=self.rng2())
-        res1, res2 = self.random_cupy_function(videos, labels)
-        videos_normalized, labels = self.common_preprocess(videos, labels)
+        augmented_videos = self.cupy_data_aug(videos)
+        videos_normalized, labels = self.common_preprocess(augmented_videos, labels)
         return videos_normalized, labels
 
 
@@ -219,7 +202,9 @@ class DALILoader:
                                                  sequence_length=ModelConfig.VIDEO_SIZE,
                                                  num_threads=2,
                                                  device_id=0,
-                                                 file_list=file_list)
+                                                 file_list=file_list,
+                                                 exec_async=False,  # should only be used for prototyping and debugging
+                                                 exec_pipelined=False)  # Same as above
         elif mode == "Validation":
             self.pipeline = NoAugPipeline(batch_size=ModelConfig.BATCH_SIZE,
                                           sequence_length=ModelConfig.VIDEO_SIZE,

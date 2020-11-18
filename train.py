@@ -71,6 +71,7 @@ def main():
                                     transforms.VerticalFlip(),
                                     transforms.HorizontalFlip(),
                                     transforms.Rotate180(),
+                                    transforms.ReverseTime(),
                                     transforms.ToTensor(),
                                     transforms.Noise()
                                 ]))
@@ -83,7 +84,8 @@ def main():
     if DataConfig.DALI:
         val_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Validation"),
                                     DataConfig.LABEL_MAP,
-                                    limit=args.limit)
+                                    limit=args.limit,
+                                    mode="Validation")
     else:
         val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
                               limit=args.limit,

@@ -120,6 +120,15 @@ class Rotate180(object):
         return {"video": video, "label": label}
 
 
+class ReverseTime(object):
+    """ Randomly plays a video backward """
+
+    def __call__(self, sample):
+        video, label = sample["video"], sample["label"]
+        video = np.flip(video, axis=0).copy()   # .copy() is to make PyTorch happy
+        return {"video": video, "label": label}
+
+
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
