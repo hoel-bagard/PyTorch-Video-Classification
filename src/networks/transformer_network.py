@@ -1,4 +1,4 @@
-import torch
+from einops import rearrange
 import torch.nn as nn
 
 from src.networks.layers import (
@@ -30,9 +30,7 @@ class CNN(nn.Module):
 
     def forward(self, inputs):
         x = self.first_conv(inputs)
-        for block in self.blocks:
-            x = block(x)
-        x = torch.flatten(x, start_dim=1)
+        x = self.blocks(x)
         return x
 
 
@@ -42,12 +40,12 @@ class Transformer(nn.Module):
         nb_classes = ModelConfig.OUTPUT_CLASSES
         self.cnn_output_size = get_cnn_output_size()
         self.cnn = CNN()
-        self.transformer = TransformerLayer(self.cnn_output_size, nb_classes, dim_feedforward=512, nlayers=2)
+        self.transformer = TransformerLayer(self.cnn_output_size, nb_classes, dim_feedforward=512, nlayers=3)
         self.dense = nn.Linear(ModelConfig.VIDEO_SIZE * nb_classes, nb_classes)
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
-        x = inputs.view(batch_size * timesteps, C, H, W)
+        x = rearrange(inputs, "b t  c h w -> (b t) c h w")
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
         x = self.transformer(x)   # Outputs (batch_size, timesteps, nb_classes)

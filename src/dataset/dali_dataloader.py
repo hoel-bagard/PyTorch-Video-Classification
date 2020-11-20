@@ -157,9 +157,9 @@ class AugmentationPipeline(LoadingPipeline):
 
     def define_graph(self):
         videos, labels = self.load()
-        videos = self.flip(videos, horizontal=self.rng(), vertical=self.rng2())
-        augmented_videos = self.cupy_data_aug(videos)
-        videos_normalized, labels = self.common_preprocess(augmented_videos, labels)
+        flipped_videos = self.flip(videos, horizontal=self.rng(), vertical=self.rng2())
+        # augmented_videos = self.cupy_data_aug(videos)
+        videos_normalized, labels = self.common_preprocess(flipped_videos, labels)
         return videos_normalized, labels
 
 

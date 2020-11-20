@@ -31,7 +31,7 @@ class TensorBoard():
         self.train_tb_writer = SummaryWriter(os.path.join(DataConfig.TB_DIR, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(DataConfig.TB_DIR, "Validation"))
         if ModelConfig.NETWORK != "LRCN":
-            self.train_tb_writer.add_graph(model, (torch.empty(ModelConfig.BATCH_SIZE, ModelConfig.VIDEO_SIZE,
+            self.train_tb_writer.add_graph(model, (torch.empty(2, ModelConfig.VIDEO_SIZE,
                                                    1 if ModelConfig.USE_GRAY_SCALE else 3,
                                                    ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1],
                                                    device=self.device), ))
