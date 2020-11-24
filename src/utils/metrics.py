@@ -1,23 +1,19 @@
 import itertools
-from typing import (
-    List,
-    Union
-)
+from typing import List
+
 
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from nvidia.dali.plugin import pytorch
 
+from src.dataset.build_dataloader import Dataloader
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
 
 
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn: nn.Module,
-                 train_dataloader: Union[torch.utils.data.DataLoader, pytorch.DALIGenericIterator],
-                 val_dataloader: Union[torch.utils.data.DataLoader, pytorch.DALIGenericIterator],
+    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: Dataloader, val_dataloader: Dataloader,
                  max_batches: int = 10):
         self.model = model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -35,7 +31,6 @@ class Metrics:
         self.cm = np.zeros((ModelConfig.OUTPUT_CLASSES, ModelConfig.OUTPUT_CLASSES))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
             if DataConfig.DALI:
-                batch = batch[0]
                 batch["label"] = batch["label"].repeat(*batch["video"].shape[:2])
             imgs, labels_batch = batch["video"].float(), batch["label"].cpu().detach().numpy()
             predictions_batch = self.model(imgs.to(self.device))

@@ -6,16 +6,13 @@ import shutil
 import time
 
 import torch
-from torchvision.transforms import Compose
 from torchsummary import summary
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
-from src.dataset.pytorch_dataset import Dataset
-from src.dataset.dali_dataloader import DALILoader
+from src.dataset.build_dataloader import Dataloader
 from src.networks.build_network import build_model
 from src.train import train
-import src.dataset.transforms as transforms
 
 
 def main():
@@ -55,58 +52,14 @@ def main():
 
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
 
-    if DataConfig.DALI:
-        train_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Train"),
-                                      DataConfig.LABEL_MAP,
-                                      limit=args.limit)
-    else:
-        train_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Train"),
-                                limit=args.limit,
-                                load_videos=args.load_data,
-                                transform=Compose([
-                                    # transforms.Crop(top=900, bottom=400),
-                                    # transforms.RandomCrop(0.98),
-                                    # transforms.Resize(*ModelConfig.IMAGE_SIZES),
-                                    transforms.Normalize(),
-                                    transforms.VerticalFlip(),
-                                    transforms.HorizontalFlip(),
-                                    transforms.Rotate180(),
-                                    transforms.ReverseTime(),
-                                    transforms.ToTensor(),
-                                    transforms.Noise()
-                                ]))
-        train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=ModelConfig.BATCH_SIZE,
-                                                       shuffle=True, num_workers=ModelConfig.WORKERS,
-                                                       drop_last=ModelConfig.NETWORK == "LRCN")
+    train_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Train"),
+                                  limit=args.limit)
 
-    print("Train data loaded" + ' ' * (os.get_terminal_size()[0] - 17))
+    val_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Validation"),
+                                limit=args.limit)
 
-    if DataConfig.DALI:
-        val_dataloader = DALILoader(os.path.join(DataConfig.DATA_PATH, "Validation"),
-                                    DataConfig.LABEL_MAP,
-                                    limit=args.limit,
-                                    mode="Validation")
-    else:
-        val_dataset = Dataset(os.path.join(DataConfig.DATA_PATH, "Validation"),
-                              limit=args.limit,
-                              load_videos=args.load_data,
-                              transform=Compose([
-                                  # transforms.Crop(top=900, bottom=400),
-                                  # transforms.Resize(*ModelConfig.IMAGE_SIZES),
-                                  transforms.Normalize(),
-                                  transforms.ToTensor()
-                              ]))
-        val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=ModelConfig.BATCH_SIZE,
-                                                     shuffle=False, num_workers=ModelConfig.WORKERS,
-                                                     drop_last=ModelConfig.NETWORK == "LRCN")
-    print("Validation data loaded" + ' ' * (os.get_terminal_size()[0] - 22))
-
-    if DataConfig.DALI:
-        print(f"\nLoaded {len(train_dataloader)} train data and",
-              f"{len(val_dataloader)} validation data", flush=True)
-    else:
-        print(f"\nLoaded {len(train_dataloader.dataset)} train data and",
-              f"{len(val_dataloader.dataset)} validation data", flush=True)
+    print(f"\nLoaded {len(train_dataloader)} train data and",
+          f"{len(val_dataloader)} validation data", flush=True)
 
     model = build_model(ModelConfig.NETWORK)
     # The summary does not work with an LSTM for some reason

@@ -3,8 +3,8 @@ import json
 import tempfile
 from typing import Dict
 
-import cupy as cp
-from cupyx.scipy import ndimage
+# import cupy as cp
+# from cupyx.scipy import ndimage
 import cv2
 import nvidia.dali.ops as ops
 import nvidia.dali.types as types
@@ -86,33 +86,33 @@ def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) ->
     return label_list
 
 
-def cupy_data_aug(video):
-    """For now everything is in one function"""
-    # TODO: set batch_processing to True in the ops.PythonFunction
-    # TODO: in the documentation it is specified that the input must not be modified,
-    #       and in the example the resutls of operations are always assigned to new variables.
-    #       This is why the code looks a bit weird here (numbers of different variables....).
-    # Randomly does 180 degrees flipping
-    if cp.random.random_integers(0, 1):
-        # TODO: Need to check the axes (axes=(1, 0) for images)
-        rotated_video = ndimage.rotate(video, 180, axes=(2, 1), order=1)
-    else:
-        rotated_video = cp.copy(video)
+# def cupy_data_aug(video):
+#     """For now everything is in one function"""
+#     # TODO: set batch_processing to True in the ops.PythonFunction
+#     # TODO: in the documentation it is specified that the input must not be modified,
+#     #       and in the example the resutls of operations are always assigned to new variables.
+#     #       This is why the code looks a bit weird here (numbers of different variables....).
+#     # Randomly does 180 degrees flipping
+#     if cp.random.random_integers(0, 1):
+#         # TODO: Need to check the axes (axes=(1, 0) for images)
+#         rotated_video = ndimage.rotate(video, 180, axes=(2, 1), order=1)
+#     else:
+#         rotated_video = cp.copy(video)
 
-    # Adds some uniform noise
-    noise_scale = (cp.random.rand(*video.shape) * 0.2) + 0.9
-    noise_offset = (cp.random.rand(*video.shape)-0.5)*0.05  # TODO: Use the same noise for every frame? (video[0].shape)
-    # This function is called before the image is normalized to [0, 1], hence the *255
-    video_with_noise = rotated_video * noise_scale + 255*noise_offset
-    clipped_video = cp.clip(video_with_noise, a_min=0, a_max=255)
+#     # Adds some uniform noise
+#     noise_scale = (cp.random.rand(*video.shape) * 0.2) + 0.9
+#     noise_offset = (cp.random.rand(*video.shape)-0.5)*0.05  # TODO: Use the same noise for every frame? (video[0].shape)
+#     # This function is called before the image is normalized to [0, 1], hence the *255
+#     video_with_noise = rotated_video * noise_scale + 255*noise_offset
+#     clipped_video = cp.clip(video_with_noise, a_min=0, a_max=255)
 
-    # Randomly plays the video backward
-    if cp.random.random_integers(0, 1):
-        flipped_video = cp.flip(clipped_video, axis=0)
-    else:
-        flipped_video = cp.copy(clipped_video)
+#     # Randomly plays the video backward
+#     if cp.random.random_integers(0, 1):
+#         flipped_video = cp.flip(clipped_video, axis=0)
+#     else:
+#         flipped_video = cp.copy(clipped_video)
 
-    return flipped_video
+#     return flipped_video
 
 
 class LoadingPipeline(Pipeline):
@@ -150,7 +150,7 @@ class AugmentationPipeline(LoadingPipeline):
                  file_list: str, mode: str = "Train", exec_async=True, exec_pipelined=True):
         super().__init__(batch_size, sequence_length, num_threads, device_id, file_list, mode,
                          exec_async=exec_async, exec_pipelined=exec_pipelined)
-        self.cupy_data_aug = ops.PythonFunction(function=cupy_data_aug, num_outputs=1, device="gpu")
+        # self.cupy_data_aug = ops.PythonFunction(function=cupy_data_aug, num_outputs=1, device="gpu")
         self.rng = ops.CoinFlip()
         self.rng2 = ops.CoinFlip()
         self.flip = ops.Flip(device="gpu")

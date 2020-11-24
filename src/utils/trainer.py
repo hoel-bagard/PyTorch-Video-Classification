@@ -4,7 +4,6 @@ import time
 import torch
 
 from config.model_config import ModelConfig
-from config.data_config import DataConfig
 
 
 class Trainer:
@@ -18,12 +17,8 @@ class Trainer:
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         batch_size = ModelConfig.BATCH_SIZE
-        if DataConfig.DALI:
-            self.train_steps_per_epoch = (len(train_dataloader) + (batch_size - 1)) // batch_size
-            self.val_steps_per_epoch = (len(val_dataloader) + (batch_size - 1)) // batch_size
-        else:
-            self.train_steps_per_epoch = (len(train_dataloader.dataset) + (batch_size - 1)) // batch_size
-            self.val_steps_per_epoch = (len(val_dataloader.dataset) + (batch_size - 1)) // batch_size
+        self.train_steps_per_epoch = (len(train_dataloader) + (batch_size - 1)) // batch_size
+        self.val_steps_per_epoch = (len(val_dataloader) + (batch_size - 1)) // batch_size
 
     def train_epoch(self):
         epoch_loss = 0.0
@@ -33,10 +28,7 @@ class Trainer:
             data_loading_finished_time = time.perf_counter()
             self.optimizer.zero_grad()
 
-            if DataConfig.DALI:
-                inputs, labels = batch[0]["video"].float(), batch[0]["label"].long()
-            else:
-                inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
+            inputs, labels = batch["video"], batch["label"]
 
             if ModelConfig.NETWORK == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
@@ -49,8 +41,8 @@ class Trainer:
 
             previous_step_start_time = step_start_time
             if step_time:
-                step_time = 0.95*step_time + 0.05*1000*(time.perf_counter() - step_start_time)
-                fetch_time = 0.95*fetch_time + 0.05*1000*(data_loading_finished_time - previous_step_start_time)
+                step_time = 0.9*step_time + 0.1*1000*(time.perf_counter() - step_start_time)
+                fetch_time = 0.9*fetch_time + 0.1*1000*(data_loading_finished_time - previous_step_start_time)
             else:
                 step_time = 1000*(time.perf_counter() - step_start_time)
                 fetch_time = 1000*(data_loading_finished_time - previous_step_start_time)
@@ -66,10 +58,7 @@ class Trainer:
         for step, batch in enumerate(self.val_dataloader, start=1):
             data_loading_finished_time = time.perf_counter()
 
-            if DataConfig.DALI:
-                inputs, labels = batch[0]["video"].float(), batch[0]["label"].long()
-            else:
-                inputs, labels = batch["video"].to(self.device).float(), batch["label"].to(self.device).long()
+            inputs, labels = batch["video"], batch["label"]
 
             if ModelConfig.NETWORK == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])

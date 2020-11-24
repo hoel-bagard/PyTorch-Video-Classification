@@ -50,8 +50,8 @@ class TensorBoard():
         # Get some data
         batch = next(iter(dataloader))
         if DataConfig.DALI:
-            batch = batch[0]
             batch["label"] = batch["label"].repeat(*batch["video"].shape[:2])
+
         if ModelConfig.NETWORK == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
@@ -87,8 +87,8 @@ class TensorBoard():
         # Get some data
         batch = next(iter(dataloader))
         if DataConfig.DALI:
-            batch = batch[0]
             batch["label"] = batch["label"].repeat(*batch["video"].shape[:2])
+
         if ModelConfig.NETWORK == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
