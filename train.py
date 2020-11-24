@@ -11,7 +11,7 @@ from torchsummary import summary
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
-from src.dataset.dataset import Dataset
+from src.dataset.pytorch_dataset import Dataset
 from src.dataset.dali_dataloader import DALILoader
 from src.networks.build_network import build_model
 from src.train import train
