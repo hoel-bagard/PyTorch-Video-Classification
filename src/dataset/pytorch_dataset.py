@@ -6,7 +6,7 @@ import numpy as np
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
-from src.dataset.dataset_utils import (
+from src.dataset.pytorch_dataset_utils import (
     default_loader,
     n_to_n_loader
 )

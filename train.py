@@ -58,8 +58,7 @@ def main():
     val_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Validation"),
                                 limit=args.limit)
 
-    print(f"\nLoaded {len(train_dataloader)} train data and",
-          f"{len(val_dataloader)} validation data", flush=True)
+    print(f"\nLoaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
 
     model = build_model(ModelConfig.NETWORK)
     # The summary does not work with an LSTM for some reason
