@@ -11,7 +11,7 @@ def main():
 
     cap = cv2.VideoCapture(args.video_path)
     _, frame = cap.read()
-    video_length = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    video_length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width, height = frame.shape[0:2]
     previous_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     hsv = np.zeros_like(frame)

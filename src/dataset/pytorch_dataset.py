@@ -6,7 +6,7 @@ import numpy as np
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
-from src.dataset.dataset_utils import (
+from src.dataset.pytorch_dataset_utils import (
     default_loader,
     n_to_n_loader
 )
@@ -25,7 +25,6 @@ class Dataset(torch.utils.data.Dataset):
             limit (int, optional): If given then the number of elements for each class in the dataset
                                    will be capped to this number
             load_videos: If True then all the videos are loaded into ram
-
         """
         self.transform = transform
         self.load_videos = load_videos

@@ -1,18 +1,20 @@
 import itertools
 from typing import List
 
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 
+from src.dataset.build_dataloader import Dataloader
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
 
 
 class Metrics:
-    def __init__(self, model: nn.Module, loss_fn, train_dataloader: torch.utils.data.DataLoader,
-                 val_dataloader: torch.utils.data.DataLoader, max_batches: int = 10):
+    def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: Dataloader, val_dataloader: Dataloader,
+                 max_batches: int = 10):
         self.model = model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

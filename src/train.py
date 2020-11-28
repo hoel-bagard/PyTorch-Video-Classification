@@ -28,7 +28,7 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
     last_checkpoint_epoch = 0
 
     for epoch in range(ModelConfig.MAX_EPOCHS):
-        epoch_start_time = time.time()
+        epoch_start_time = time.perf_counter()
         print(f"\nEpoch {epoch}/{ModelConfig.MAX_EPOCHS}")
 
         epoch_loss = trainer.train_epoch()
@@ -43,12 +43,12 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
             best_loss, last_checkpoint_epoch = epoch_loss, epoch
             torch.save(model.state_dict(), save_path)
 
-        print(f"\nEpoch loss: {epoch_loss:.5e}  -  Took {time.time() - epoch_start_time:.5f}s")
+        print(f"\nEpoch loss: {epoch_loss:.5e}  -  Took {time.perf_counter() - epoch_start_time:.5f}s")
 
         # Validation and other metrics
         if epoch % DataConfig.VAL_FREQ == 0 and epoch >= DataConfig.RECORD_START:
             with torch.no_grad():
-                validation_start_time = time.time()
+                validation_start_time = time.perf_counter()
                 epoch_loss = trainer.val_epoch()
 
                 if DataConfig.USE_TB:
@@ -57,7 +57,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
 
                     # Metrics for the Train dataset
                     tensorboard.write_images(epoch, train_dataloader)
-                    # tensorboard.write_videos(epoch, train_dataloader)
+                    if epoch % (3*DataConfig.VAL_FREQ) == 0:
+                        tensorboard.write_videos(epoch, train_dataloader)
                     train_acc = tensorboard.write_metrics(epoch)
 
                     # Metrics for the Validation dataset
@@ -69,7 +70,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                     print(f"\nTrain accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}",
                           end='\r', flush=True)
 
-                print(f"\nValidation loss: {epoch_loss:.5e}  -  Took {time.time() - validation_start_time:.5f}s",
+                print(f"\nValidation loss: {epoch_loss:.5e}  -"
+                      f"  Took {time.perf_counter() - validation_start_time:.5f}s",
                       flush=True)
         scheduler.step()
 

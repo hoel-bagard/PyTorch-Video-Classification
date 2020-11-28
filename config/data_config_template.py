@@ -14,6 +14,8 @@ class DataConfig:
     VAL_FREQ           = 5                  # How often to compute accuracy and images (also used for validation freq)
     RECORD_START       = 0                  # Checkpoints and TensorBoard are not recorded before this epoch
 
+    DALI = True  # Whether to use DALI for data loading or PyTorch/numpy
+
     # Build a map between id and names
     LABEL_MAP = {}
     with open(os.path.join(DATA_PATH, "classes.names")) as table_file:

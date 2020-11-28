@@ -1,12 +1,14 @@
-import math
-
+from einops import rearrange
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 
 from src.networks.layers import (
     DarknetConv,
-    DarknetBlock
+    # DarknetBlock
+)
+from .network_utils import (
+    layer_init,
+    get_cnn_output_size
 )
 from .network_utils import (
     layer_init,
@@ -16,7 +18,7 @@ from config.model_config import ModelConfig
 
 
 class CNN(nn.Module):
-    def __init__(self):
+    def __init__(self):  # TODO: have layer_init as a parameter
         super().__init__()
         self.output_size = ModelConfig.OUTPUT_CLASSES
         channels = ModelConfig.CHANNELS
@@ -33,9 +35,7 @@ class CNN(nn.Module):
 
     def forward(self, inputs):
         x = self.first_conv(inputs)
-        for block in self.blocks:
-            x = block(x)
-        x = torch.flatten(x, start_dim=1)
+        x = self.blocks(x)
         return x
 
 
@@ -56,7 +56,7 @@ class LRCN(nn.Module):
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
-        x = inputs.view(batch_size * timesteps, C, H, W)
+        x = rearrange(inputs, "b t  c h w -> (b t) c h w")
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
         x, self.hidden_cell = self.lstm(x, self.hidden_cell)

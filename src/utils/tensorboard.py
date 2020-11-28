@@ -1,5 +1,6 @@
 import os
 
+from einops import rearrange
 import numpy as np
 import torch
 import torch.nn as nn
@@ -30,7 +31,7 @@ class TensorBoard():
         self.train_tb_writer = SummaryWriter(os.path.join(DataConfig.TB_DIR, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(DataConfig.TB_DIR, "Validation"))
         if ModelConfig.NETWORK != "LRCN":
-            self.train_tb_writer.add_graph(model, (torch.empty(ModelConfig.BATCH_SIZE, ModelConfig.VIDEO_SIZE,
+            self.train_tb_writer.add_graph(model, (torch.empty(2, ModelConfig.VIDEO_SIZE,
                                                    1 if ModelConfig.USE_GRAY_SCALE else 3,
                                                    ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1],
                                                    device=self.device), ))
@@ -62,11 +63,12 @@ class TensorBoard():
 
         # Write prediction on some images and add them to TensorBoard
         out_imgs = draw_pred(videos, predictions, labels)
+
         for image_index, out_img in enumerate(out_imgs):
             # If opencv resizes the image, it removes the channel dimension
             if out_img.ndim == 2:
-                out_img = np.expand_dims(out_img, 0)
-            out_img = np.transpose(out_img, (2, 0, 1))  # HWC -> CHW
+                out_img = np.expand_dims(out_img, -1)
+            out_img = rearrange(out_img, 'w h c -> c w h')
             tb_writer.add_image(f"{mode}/prediction_{image_index}", out_img, global_step=epoch)
 
     def write_videos(self, epoch: int, dataloader: torch.utils.data.DataLoader, mode: str = "Train"):

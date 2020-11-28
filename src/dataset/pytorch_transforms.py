@@ -26,7 +26,7 @@ class Crop(object):
 class RandomCrop(object):
     """ Random crops image """
 
-    def __init__(self, size_reduction_factor: int = 0.9):
+    def __init__(self, size_reduction_factor: int = 0.95):
         self.size = size_reduction_factor
 
     def __call__(self, sample):
@@ -35,8 +35,10 @@ class RandomCrop(object):
                                   int(video.shape[2]*self.size), video.shape[-1]))
         h = random.randint(0, int(video.shape[1]*(1-self.size))-1)
         w = random.randint(0, int(video.shape[2]*(1-self.size))-1)
-        for i in range(len(video)):
-            cropped_video[i] = video[i, h:h+int(video.shape[1]*self.size), w:w+int(video.shape[2]*self.size)]
+        # for i in range(len(video)):
+        #     cropped_video[i] = video[i, h:h+int(video.shape[1]*self.size), w:w+int(video.shape[2]*self.size)]
+        # TODO: remove for loop for other transforms too
+        cropped_video = video[:, h:h+int(video.shape[1]*self.size), w:w+int(video.shape[2]*self.size)]
 
         return {"video": cropped_video, "label": label}
 
@@ -117,6 +119,15 @@ class Rotate180(object):
                     frame = np.expand_dims(frame, -1)
                 video[i] = frame
 
+        return {"video": video, "label": label}
+
+
+class ReverseTime(object):
+    """ Randomly plays a video backward """
+
+    def __call__(self, sample):
+        video, label = sample["video"], sample["label"]
+        video = np.flip(video, axis=0).copy()   # .copy() is to make PyTorch happy
         return {"video": video, "label": label}
 
 
