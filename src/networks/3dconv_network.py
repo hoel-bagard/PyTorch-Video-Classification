@@ -21,7 +21,7 @@ class Conv3DNet(nn.Module):
     def forward(self, x):
         batch_size, timesteps, C, H, W = x.size()
 
-        if not ModelConfig.USE_N_TO_N:
+        if not ModelConfig.N_TO_N:
             print("N to 1 not implemented for 3DNet")
             exit()
         else:

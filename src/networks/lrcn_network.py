@@ -1,58 +1,43 @@
+from typing import Callable
+
 from einops import rearrange
 import torch
 import torch.nn as nn
 
-from src.networks.layers import (
-    DarknetConv,
-    # DarknetBlock
-)
 from .network_utils import (
     layer_init,
     get_cnn_output_size
 )
-from .network_utils import (
-    layer_init,
-    get_cnn_output_size
-)
-from config.model_config import ModelConfig
-
-
-class CNN(nn.Module):
-    def __init__(self):  # TODO: have layer_init as a parameter
-        super().__init__()
-        self.output_size = ModelConfig.OUTPUT_CLASSES
-        channels = ModelConfig.CHANNELS
-        sizes = ModelConfig.SIZES
-        strides = ModelConfig.STRIDES
-
-        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0],
-                                      padding=ModelConfig.PADDINGS[0])
-        self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i],
-                                                  padding=ModelConfig.PADDINGS[i])
-                                    for i in range(1, len(channels))])
-
-        self.apply(layer_init)
-
-    def forward(self, inputs):
-        x = self.first_conv(inputs)
-        x = self.blocks(x)
-        return x
 
 
 class LRCN(nn.Module):
-    def __init__(self, hidden_size: int = 60, num_layers: int = 5):
+    def __init__(self, feature_extractor: nn.Module, batch_size: int,
+                 output_classes: int, n_to_n: bool,
+                 hidden_size: int = 60, num_layers: int = 5,
+                 layer_init: Callable[[nn.Module], None] = layer_init):
+        """
+        CNN feature extractor followed by an LSTM
+        Args:
+            feature_extractor: CNN to use as a feature extractor
+            batch_size: batch size
+            output_classes: Number of output classes (classification)
+            n_to_n: Whether the model should be N_To_N or N_to_1
+            layer_init: Function used to initialise the layers of the network
+        """
         super().__init__()
-        self.cnn = CNN()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
         cnn_output_size = get_cnn_output_size()
 
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.feature_extractor = feature_extractor
+        self.n_to_n = n_to_n
         self.num_layers = num_layers
         self.hidden_size: int = hidden_size
 
-        self.hidden_cell = (torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device),
-                            torch.zeros(self.num_layers, ModelConfig.BATCH_SIZE, self.hidden_size, device=self.device))
+        self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device),
+                            torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device))
         self.lstm = nn.LSTM(cnn_output_size, self.hidden_size, num_layers, batch_first=True)
-        self.dense = nn.Linear(hidden_size, ModelConfig.OUTPUT_CLASSES)
+        self.dense = nn.Linear(hidden_size, output_classes)
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
@@ -60,13 +45,13 @@ class LRCN(nn.Module):
         x = self.cnn(x)
         x = x.view(batch_size, timesteps, -1)
         x, self.hidden_cell = self.lstm(x, self.hidden_cell)
-        if not ModelConfig.USE_N_TO_N:
+        if not self.n_to_n:
             x = x[:, -1]
         x = self.dense(x)
         # F.log_softmax(x, dim=-1)
         return x
 
-    def reset_lstm_state(self, batch_size: int = ModelConfig.BATCH_SIZE):
+    def reset_lstm_state(self, batch_size: int):
         """
         Args:
             batch_size: Needs to be the same as the size of the next batch.

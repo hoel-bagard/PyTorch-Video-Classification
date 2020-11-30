@@ -1,0 +1,3 @@
+[submodule "src/torch_utils"]
+	path = src/torch_utils
+	url = https://github.com/hoel-bagard/torch_utils.git

@@ -10,6 +10,10 @@ from torchsummary import summary
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
+from src.utils.config_to_kwargs import (
+    get_data_config_dict,
+    get_model_config_dict
+)
 from src.dataset.build_dataloader import Dataloader
 from src.networks.build_network import build_model
 from src.train import train
@@ -60,10 +64,10 @@ def main():
 
     print(f"\nLoaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
 
-    model = build_model(ModelConfig.NETWORK)
+    model = build_model(ModelConfig.MODEL, **get_model_config_dict())
     # The summary does not work with an LSTM for some reason
     if ModelConfig.NETWORK != "LRCN":
-        summary(model, (ModelConfig.VIDEO_SIZE, 1 if ModelConfig.USE_GRAY_SCALE else 3,
+        summary(model, (ModelConfig.SEQUENCE_LENGTH, 1 if ModelConfig.USE_GRAY_SCALE else 3,
                         ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1]))
 
     train(model, train_dataloader, val_dataloader)

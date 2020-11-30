@@ -1,4 +1,9 @@
 import os
+from typing import (
+    Dict,
+    Tuple,
+    Optional
+)
 
 import torch
 from torchvision.transforms import Compose
@@ -6,9 +11,9 @@ from nvidia.dali.plugin import pytorch
 
 from .pytorch_dataset import Dataset
 from .dali_dataloader import DALILoader
-from config.data_config import DataConfig
-from config.model_config import ModelConfig
 import src.dataset.pytorch_transforms as transforms
+# from config.data_config import DataConfig
+# from config.model_config import ModelConfig
 
 
 class DataIterator(object):
@@ -24,7 +29,7 @@ class DataIterator(object):
     def __next__(self):
         batch = self.dataloader_iter.next()
         # DALI has an extra dimension (don't know why), and the data is already on GPU.
-        if DataConfig.DALI:
+        if self.dataloader.__name__ == "DALILoader":
             batch = batch[0]
         else:
             batch["video"] = batch["video"].to(self.device).float()
@@ -37,19 +42,34 @@ class DataIterator(object):
 
 class Dataloader(object):
     """Wrapper around the PyTorch / DALI DataLoaders"""
-    def __init__(self, data_path: str, transform=None, limit: int = None, load_videos: bool = False):
+    def __init__(self, data_path: str, dali: bool, label_map: Dict[int, str], image_sizes: Tuple[int, int],
+                 batch_size: int, num_workers: int, drop_last: bool = False,
+                 transform: Optional[type] = None, limit: Optional[int] = None, load_videos: bool = False):
+        """
+        Args:
+            data_path: Path to the data to load
+            dali: True to use a dali dataloader, otherwise a PyTorch DataLoader will be used
+            label_map: dictionarry mapping an int to a class
+            image_sizes: Size of the input images
+            batch_size: Batch size to use
+            num_workers: Number of workers for the PyTorch DataLoader
+            drop_last: Wether to drop last elements to get "perfect" batches, should be True for LSTMs
+            transform: PyTorch transforms (used if dali is set to False)
+            limit: If not None then at most that number of elements will be used
+            load_videos: If true then the videos will be loaded in RAM (when dali is set to False)
+        """
         mode = "Train" if "Train" in data_path else "Validation"
 
-        if DataConfig.DALI:
+        if dali:
             self.dataloader: pytorch.DALIGenericIterator = DALILoader(data_path,
-                                                                      DataConfig.LABEL_MAP,
+                                                                      label_map,
                                                                       limit=limit,
                                                                       mode=mode)
         else:
             if mode == "Train":
                 data_transforms = Compose([
                     transforms.RandomCrop(),
-                    transforms.Resize(*ModelConfig.IMAGE_SIZES),
+                    transforms.Resize(*image_sizes),
                     transforms.Normalize(),
                     transforms.VerticalFlip(),
                     transforms.HorizontalFlip(),
@@ -60,7 +80,7 @@ class Dataloader(object):
                 ])
             else:
                 data_transforms = Compose([
-                    transforms.Resize(*ModelConfig.IMAGE_SIZES),
+                    transforms.Resize(*image_sizes),
                     transforms.Normalize(),
                     transforms.ToTensor()
                 ])
@@ -70,10 +90,10 @@ class Dataloader(object):
                               load_videos=load_videos,
                               transform=data_transforms)
             self.dataloader = torch.utils.data.DataLoader(dataset,
-                                                          batch_size=ModelConfig.BATCH_SIZE,
+                                                          batch_size=batch_size,
                                                           shuffle=(mode == "Train"),
-                                                          num_workers=ModelConfig.WORKERS,
-                                                          drop_last=(ModelConfig.NETWORK == "LRCN"))
+                                                          num_workers=num_workers,
+                                                          drop_last=drop_last)
 
         msg = f"{mode} data loaded"
         print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)))

@@ -29,7 +29,7 @@ class Dataset(torch.utils.data.Dataset):
         self.transform = transform
         self.load_videos = load_videos
 
-        if ModelConfig.USE_N_TO_N:
+        if ModelConfig.N_TO_N:
             self.labels = n_to_n_loader(data_path, DataConfig.LABEL_MAP, limit=limit, load_videos=self.load_videos)
         else:
             self.labels = default_loader(data_path, DataConfig.LABEL_MAP, limit=limit, load_videos=self.load_videos)
@@ -43,16 +43,16 @@ class Dataset(torch.utils.data.Dataset):
 
         if self.load_videos:
             video = self.labels[i, 0].astype(np.uint8)
-            start = random.randint(0, len(video) - ModelConfig.VIDEO_SIZE)
-            video = video[start:start+ModelConfig.VIDEO_SIZE]
+            start = random.randint(0, len(video) - ModelConfig.SEQUENCE_LENGTH)
+            video = video[start:start+ModelConfig.SEQUENCE_LENGTH]
         else:
             cap = cv2.VideoCapture(self.labels[i, 0])
             frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
-            start = random.randint(0, frame_count-1 - ModelConfig.VIDEO_SIZE)
+            start = random.randint(0, frame_count-1 - ModelConfig.SEQUENCE_LENGTH)
             cap.set(cv2.CAP_PROP_POS_FRAMES, start)
 
             video = []
-            for j in range(ModelConfig.VIDEO_SIZE):
+            for j in range(ModelConfig.SEQUENCE_LENGTH):
                 frame_ok, frame = cap.read()
                 if frame_ok:
                     if ModelConfig.USE_GRAY_SCALE:
@@ -70,8 +70,8 @@ class Dataset(torch.utils.data.Dataset):
             cap.release()
             video = np.asarray(video)
 
-        if ModelConfig.USE_N_TO_N:
-            label = self.labels[i, 1][start:start+ModelConfig.VIDEO_SIZE]
+        if ModelConfig.N_TO_N:
+            label = self.labels[i, 1][start:start+ModelConfig.SEQUENCE_LENGTH]
         else:
             label = int(self.labels[i, 1])
         sample = {"video": video, "label": label}

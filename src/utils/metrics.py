@@ -1,5 +1,8 @@
 import itertools
-from typing import List
+from typing import (
+    List,
+    Dict
+)
 
 
 import numpy as np
@@ -8,18 +11,31 @@ import torch
 import torch.nn as nn
 
 from src.dataset.build_dataloader import Dataloader
-from config.model_config import ModelConfig
-from config.data_config import DataConfig
 
 
 class Metrics:
     def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: Dataloader, val_dataloader: Dataloader,
-                 max_batches: int = 10):
+                 label_map: Dict[int, str], n_to_n: bool, output_classes: int, max_batches: int = 10):
+        """
+        Class computing usefull metrics for classification tasks
+        Args:
+            model: The PyTorch model being trained
+            loss_fn: Function used to compute the loss of the model
+            train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
+            val_dataloader: DataLoader with a PyTorch DataLoader like interface, contains validation data
+            label_map: Dictionary linking class index to class name
+            n_to_n: True if using one label for each element of the sequence
+            output_classes: Number of classes the network is classifying
+            max_batches: If not None, then the metrics will be computed using at most this number of batches
+        """
         self.model = model
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
+        self.label_map = label_map
+        self.n_to_n = n_to_n
+        self.output_classes = output_classes
         self.max_batches = max_batches
 
     def compute_confusion_matrix(self, mode: str = "Train"):
@@ -28,7 +44,7 @@ class Metrics:
         Args:
             mode: Either "Train" or "Validation"
         """
-        self.cm = np.zeros((ModelConfig.OUTPUT_CLASSES, ModelConfig.OUTPUT_CLASSES))
+        self.cm = np.zeros((self.output_classes, self.output_classes))
         for step, batch in enumerate(self.train_dataloader if mode == "Train" else self.val_dataloader, start=1):
             imgs, labels_batch = batch["video"].float(), batch["label"].cpu().detach().numpy()
             predictions_batch = self.model(imgs.to(self.device))
@@ -36,7 +52,7 @@ class Metrics:
             predictions_batch = torch.argmax(predictions_batch, dim=-1).int().cpu().detach().numpy()
 
             for (label_video, pred_video) in zip(labels_batch, predictions_batch):  # batch
-                if ModelConfig.USE_N_TO_N:
+                if self.n_to_n:
                     for (label_frame, pred_frame) in zip(label_video, pred_video):
                         self.cm[label_frame, pred_frame] += 1
                 else:
@@ -72,7 +88,7 @@ class Metrics:
             per_class_acc: Image of the confusion matrix.
         """
         cm = self.cm
-        class_names = DataConfig.LABEL_MAP.values()
+        class_names = self.label_map.values()
 
         fig = plt.figure(figsize=(8, 8))
         plt.imshow(cm, interpolation="nearest", cmap=plt.cm.Blues)

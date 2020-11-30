@@ -3,20 +3,29 @@ import time
 
 import torch
 
-from config.model_config import ModelConfig
-
 
 class Trainer:
     def __init__(self, model: torch.nn.Module, loss_fn: torch.nn.Module,
-                 train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader):
+                 train_dataloader: torch.utils.data.DataLoader, val_dataloader: torch.utils.data.DataLoader,
+                 batch_size: int, lr: float = 4e-3, weight_decay: float = 0):
+        """
+        Trainer class that handles training and validation epochs
+        Args:
+            model: The PyTorch model to train
+            loss_fn: Function used to compute the loss of the model
+            train_dataloader: DataLoader with a PyTorch DataLoader like interface, contains train data
+            val_dataloader: DataLoader with a PyTorch DataLoader like interface, contains validation data
+            lr: Learning rate
+            weight_decay: Used for weight regularisation (L2 penalty)
+            model_name: LRCN if using an LSTM (reset the state at each step)
+        """
         self.model = model
         self.loss_fn = loss_fn
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=ModelConfig.LR, weight_decay=ModelConfig.REG_FACTOR)
+        self.optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
         self.train_dataloader = train_dataloader
         self.val_dataloader = val_dataloader
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-        batch_size = ModelConfig.BATCH_SIZE
         self.train_steps_per_epoch = (len(train_dataloader) + (batch_size - 1)) // batch_size
         self.val_steps_per_epoch = (len(val_dataloader) + (batch_size - 1)) // batch_size
 
@@ -30,7 +39,8 @@ class Trainer:
 
             inputs, labels = batch["video"], batch["label"]
 
-            if ModelConfig.NETWORK == "LRCN":
+            # TODO: Have "preprocessing" function as an optional arg in the init
+            if self.model.__name__ == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
@@ -60,7 +70,8 @@ class Trainer:
 
             inputs, labels = batch["video"], batch["label"]
 
-            if ModelConfig.NETWORK == "LRCN":
+            # TODO: Have "preprocessing" function as an optional arg in the init
+            if self.model.__name__ == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)

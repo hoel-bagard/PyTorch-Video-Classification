@@ -1,55 +1,45 @@
+from typing import Callable
+
 from einops import rearrange
 import torch.nn as nn
 
-from src.networks.layers import (
-    DarknetConv,
-)
 from src.networks.transformer_layer import TransformerLayer
 from .network_utils import (
     layer_init,
     get_cnn_output_size
 )
-from config.model_config import ModelConfig
-
-
-class CNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.output_size = ModelConfig.OUTPUT_CLASSES
-        channels = ModelConfig.CHANNELS
-        sizes = ModelConfig.SIZES
-        strides = ModelConfig.STRIDES
-
-        self.first_conv = DarknetConv(1 if ModelConfig.USE_GRAY_SCALE else 3, channels[0], sizes[0], stride=strides[0],
-                                      padding=ModelConfig.PADDINGS[0])
-        self.blocks = nn.Sequential(*[DarknetConv(channels[i-1], channels[i], sizes[i], stride=strides[i],
-                                                  padding=ModelConfig.PADDINGS[i])
-                                    for i in range(1, len(channels))])
-
-        self.apply(layer_init)
-
-    def forward(self, inputs):
-        x = self.first_conv(inputs)
-        x = self.blocks(x)
-        return x
 
 
 class Transformer(nn.Module):
-    def __init__(self, hidden_size: int = 60, num_layers: int = 5):
+    def __init__(self, feature_extractor: nn.Module, batch_size: int,
+                 output_classes: int, n_to_n: bool, sequence_length: int,
+                 hidden_size: int = 60, num_layers: int = 5,
+                 layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
+        """
+        CNN feature extractor followed by an LSTM
+        Args:
+            feature_extractor: CNN to use as a feature extractor
+            batch_size: batch size
+            output_classes: Number of output classes (classification)
+            n_to_n: Whether the model should be N_To_N or N_to_1
+            sequence_length: Length of the input sequence
+            layer_init: Function used to initialise the layers of the network
+        """
         super().__init__()
-        nb_classes = ModelConfig.OUTPUT_CLASSES
-        self.cnn_output_size = get_cnn_output_size()
-        self.cnn = CNN()
-        self.transformer = TransformerLayer(self.cnn_output_size, nb_classes, dim_feedforward=512, nlayers=3)
-        self.dense = nn.Linear(ModelConfig.VIDEO_SIZE * nb_classes, nb_classes)
+        self.feature_extractor = feature_extractor
+        self.n_to_n = n_to_n
+        self.cnn_output_size = get_cnn_output_size(**kwargs, output_channels=kwargs["channels"][-1])
+
+        self.transformer = TransformerLayer(self.cnn_output_size, output_classes, dim_feedforward=512, nlayers=3)
+        self.dense = nn.Linear(sequence_length * output_classes, output_classes)
 
     def forward(self, inputs):
         batch_size, timesteps, C, H, W = inputs.size()
         x = rearrange(inputs, "b t  c h w -> (b t) c h w")
-        x = self.cnn(x)
+        x = self.feature_extractor(x)
         x = x.view(batch_size, timesteps, -1)
         x = self.transformer(x)   # Outputs (batch_size, timesteps, nb_classes)
-        if not ModelConfig.USE_N_TO_N:
+        if not self.n_to_n:
             x = x.view(batch_size, -1)
             x = self.dense(x)  # Outputs (batch_size, nb_classes)
         # x = F.log_softmax(x, dim=-1)

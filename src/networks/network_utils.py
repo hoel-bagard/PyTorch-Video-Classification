@@ -1,9 +1,11 @@
+from typing import (
+    Tuple,
+    List
+)
 import math
 
 import torch
 import torch.nn as nn
-
-from config.model_config import ModelConfig
 
 
 def layer_init(layer, weight_gain: float = 1, bias_const: float = 0,
@@ -34,12 +36,22 @@ def layer_init(layer, weight_gain: float = 1, bias_const: float = 0,
         layer.bias.data.zero_()
 
 
-def get_cnn_output_size():
-    width, height = ModelConfig.IMAGE_SIZES
-    for kernel_size, stride, padding in zip(ModelConfig.SIZES, ModelConfig.STRIDES, ModelConfig.PADDINGS):
+def get_cnn_output_size(image_sizes: Tuple[int, int], sizes: List[int], strides: List[int], paddings: List[int],
+                        output_channels: int, **kwargs) -> int:
+    """
+    Computes the output size of a cnn  (flattened)
+    Args:
+        image_sizes: Dimensions of the input image (width, height).
+        sizes: List with the kernel size for each convolution
+        strides: List with the stride for each convolution
+        padding: List with the padding for each convolution
+        output_channels: Number of output channels of the last convolution
+    """
+    width, height = image_sizes
+    for kernel_size, stride, padding in zip(sizes, strides, paddings):
         width = ((width - kernel_size + 2*padding) // stride) + 1
 
-    for kernel_size, stride, padding in zip(ModelConfig.SIZES, ModelConfig.STRIDES, ModelConfig.PADDINGS):
+    for kernel_size, stride, padding in zip(sizes, strides, paddings):
         height = ((height - kernel_size + 2*padding) // stride) + 1
 
-    return width*height*ModelConfig.CHANNELS[-1]
+    return width*height*output_channels

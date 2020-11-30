@@ -1,7 +1,10 @@
 import os
 import json
 import tempfile
-from typing import Dict
+from typing import (
+    Dict,
+    Optional
+)
 
 import cupy as cp
 from cupyx.scipy import ndimage
@@ -10,8 +13,6 @@ import nvidia.dali.ops as ops
 import nvidia.dali.types as types
 from nvidia.dali.pipeline import Pipeline
 from nvidia.dali.plugin import pytorch
-
-from config.model_config import ModelConfig
 
 
 def dali_n_to_n_file_list(data_path: str, label_map: Dict, limit: int = None) -> str:
@@ -123,7 +124,7 @@ class LoadingPipeline(Pipeline):
                          exec_async=exec_async, exec_pipelined=exec_pipelined)
         self.reader = ops.VideoReader(device="gpu", file_list=file_list, sequence_length=sequence_length,
                                       random_shuffle=(mode == "Train"),
-                                      initial_fill=4*ModelConfig.BATCH_SIZE,  # Size of the buffer for shuffling.
+                                      initial_fill=4*batch_size,  # Size of the buffer for shuffling.
                                       image_type=types.RGB,
                                       dtype=types.UINT8,
                                       file_list_frame_num=True,
@@ -176,13 +177,16 @@ class NoAugPipeline(LoadingPipeline):
 
 
 class DALILoader:
-    def __init__(self, data_path: str, label_map: Dict, limit: int = None, mode: str = "Train"):
+    def __init__(self, data_path: str, label_map: Dict, sequence_length: int, batch_size: int,
+                 limit: Optional[int] = None, mode: str = "Train"):
         """
         Args:
             data_path: Path to the root folder of the dataset.
                        This folder is expected to contain subfolders for each class, with the videos inside.
                        It should also contain a label.json file with the labels (file paths and time stamps)
             label_map: dictionarry mapping an int to a class
+            sequence_length: Number of elements in each sequence
+            batch_size: Batch size
             limit (int, optional): If given then the number of elements for each class in the dataset
                                    will be capped to this number
             mode: If Train the data augmentation will be applied, if Validation then there will be no data augmentation
@@ -198,16 +202,16 @@ class DALILoader:
 
         # Build pipeline (with or without data augmentation depending on the mode)
         if mode == "Train":
-            self.pipeline = AugmentationPipeline(batch_size=ModelConfig.BATCH_SIZE,
-                                                 sequence_length=ModelConfig.VIDEO_SIZE,
+            self.pipeline = AugmentationPipeline(batch_size=batch_size,
+                                                 sequence_length=sequence_length,
                                                  num_threads=2,
                                                  device_id=0,
                                                  file_list=file_list,
                                                  exec_async=False,  # should only be used for prototyping and debugging
                                                  exec_pipelined=False)  # Same as above
         elif mode == "Validation":
-            self.pipeline = NoAugPipeline(batch_size=ModelConfig.BATCH_SIZE,
-                                          sequence_length=ModelConfig.VIDEO_SIZE,
+            self.pipeline = NoAugPipeline(batch_size=batch_size,
+                                          sequence_length=sequence_length,
                                           num_threads=2,
                                           device_id=0,
                                           file_list=file_list)
