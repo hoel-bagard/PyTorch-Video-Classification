@@ -1,15 +1,17 @@
 import os
 import glob
 import json
-from typing import Dict
+from typing import (
+    Dict,
+    Optional
+)
 
 import numpy as np
 import cv2
 
-from config.model_config import ModelConfig
 
-
-def default_loader(data_path: str, label_map: Dict, limit: int = None, load_videos: bool = False) -> np.ndarray:
+def default_loader(data_path: str, label_map: Dict[int, str], limit: int = Optional[None],
+                   load_videos: bool = False, grayscale: bool = True) -> np.ndarray:
     """
     Args:
         data_path: Path to the root folder of the dataset.
@@ -18,6 +20,7 @@ def default_loader(data_path: str, label_map: Dict, limit: int = None, load_vide
         limit (int, optional): If given then the number of elements for each class in the dataset
                             will be capped to this number
         load_videos: If true then this function returns the videos instead of their paths
+        grayscale: If set to true and using the load_videos option, images will be converted to grayscale
     Return:
         numpy array containing the paths/videos and the associated label
     """
@@ -36,7 +39,7 @@ def default_loader(data_path: str, label_map: Dict, limit: int = None, load_vide
                 while(cap.isOpened()):
                     frame_ok, frame = cap.read()
                     if frame_ok:
-                        if ModelConfig.USE_GRAY_SCALE:
+                        if grayscale:
                             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                             frame = np.expand_dims(frame, -1)  # To keep a channel dimension (gray scale)
                         else:
@@ -54,7 +57,7 @@ def default_loader(data_path: str, label_map: Dict, limit: int = None, load_vide
     return np.asarray(data)
 
 
-def read_label(label: str, label_map: Dict, video_length: int):
+def read_label(label: str, label_map: Dict[int, str], video_length: int):
     """
     Args:
         label: Entry from the label file, must contain path and time stamps
@@ -87,7 +90,8 @@ def read_label(label: str, label_map: Dict, video_length: int):
     return np.asarray(labels)
 
 
-def n_to_n_loader(data_path: str, label_map: Dict, limit: int = None, load_videos: bool = False) -> np.ndarray:
+def n_to_n_loader(data_path: str, label_map: Dict[int, str], limit: int = Optional[None],
+                  load_videos: bool = False, grayscale: bool = False) -> np.ndarray:
     """
     Loading function for when every frame has an associated label
     Args:
@@ -98,6 +102,7 @@ def n_to_n_loader(data_path: str, label_map: Dict, limit: int = None, load_video
         limit (int, optional): If given then the number of elements for each class in the dataset
                             will be capped to this number
         load_videos: If true then this function returns the videos instead of their paths
+        grayscale: If set to true and using the load_videos option, images will be converted to grayscale
     Return:
         numpy array containing the paths/videos and the associated labels
     """
@@ -129,7 +134,7 @@ def n_to_n_loader(data_path: str, label_map: Dict, limit: int = None, load_video
             while(cap.isOpened()):
                 frame_ok, frame = cap.read()
                 if frame_ok:
-                    if ModelConfig.USE_GRAY_SCALE:
+                    if grayscale:
                         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                         frame = np.expand_dims(frame, -1)  # To keep a channel dimension (gray scale)
                     else:

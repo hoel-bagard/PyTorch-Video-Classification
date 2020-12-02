@@ -19,7 +19,7 @@ from src.utils.metrics import Metrics
 
 class TensorBoard():
     def __init__(self, model: nn.Module, metrics: Metrics, label_map: Dict[int, str], tb_dir: str,
-                 sequence_length: int, gray_scale: bool, image_sizes: Tuple[int, int],
+                 sequence_length: int, n_to_n: bool, gray_scale: bool, image_sizes: Tuple[int, int],
                  max_outputs: int = 4):
         """
         Class with TensorBoard utility functions.
@@ -39,10 +39,11 @@ class TensorBoard():
         self.metrics: Metrics = metrics
         self.max_outputs = max_outputs
         self.label_map = label_map
+        self.n_to_n = n_to_n
 
         self.train_tb_writer = SummaryWriter(os.path.join(tb_dir, "Train"))
         self.val_tb_writer = SummaryWriter(os.path.join(tb_dir, "Validation"))
-        if model.__name__ != "LRCN":
+        if model.__class__.__name__ != "LRCN":
             self.train_tb_writer.add_graph(model, (torch.empty(2, sequence_length,
                                                                1 if gray_scale else 3,
                                                                image_sizes[0], image_sizes[1],
@@ -63,7 +64,7 @@ class TensorBoard():
         batch = next(iter(dataloader))  # Get some data
 
         # TODO: Have optional pre and post process functions to handle the LSTM case
-        if self.model.__name__ == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
+        if self.model.__class__.__name__ == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
         else:
@@ -71,12 +72,12 @@ class TensorBoard():
 
         # Get some predictions
         predictions = self.model(videos.to(self.device))
-        if self.model.__name__ == "LRCN":
+        if self.model.__class__.__name__ == "LRCN":
             predictions, videos = predictions[:self.max_outputs], videos[:self.max_outputs]
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
 
         # Write prediction on some images and add them to TensorBoard
-        out_imgs = draw_pred(videos, predictions, labels)
+        out_imgs = draw_pred(videos, predictions, labels, self.label_map, self.n_to_n)
 
         for image_index, out_img in enumerate(out_imgs):
             # If opencv resizes the image, it removes the channel dimension
@@ -99,7 +100,7 @@ class TensorBoard():
         batch = next(iter(dataloader))  # Get some data
 
         # TODO: Have optional pre and post process functions to handle the LSTM case
-        if self.model.__name__ == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
+        if self.model.__class__.__name__ == "LRCN":  # LSTM needs proper batches (the pytorch implementation at least)
             videos, labels = batch["video"].float(), batch["label"][:self.max_outputs]
             self.model.reset_lstm_state(videos.shape[0])
         else:
@@ -107,12 +108,12 @@ class TensorBoard():
 
         # Get some predictions
         predictions = self.model(videos.to(self.device))
-        if self.model.__name__ == "LRCN":
+        if self.model.__class__.__name__ == "LRCN":
             predictions, videos = predictions[:1], videos[:1]
         predictions = torch.nn.functional.softmax(predictions, dim=-1)
 
         # Write prediction on a video and add it to TensorBoard
-        out_video = draw_pred_video(videos[0], predictions[0], labels[0])
+        out_video = draw_pred_video(videos[0], predictions[0], labels[0], self.label_map, self.n_to_n)
         out_video = np.transpose(out_video, (0, 3, 1, 2))  # HWC -> CHW
         out_video = np.expand_dims(out_video, 0)  # Re-add batch dimension
 

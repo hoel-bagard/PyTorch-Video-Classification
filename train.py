@@ -56,18 +56,21 @@ def main():
 
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
 
-    train_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Train"),
-                                  limit=args.limit)
+    train_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.DALI, DataConfig.LABEL_MAP,
+                                  drop_last=ModelConfig.MODEL.__name__ == "LRCN",
+                                  limit=args.limit, **get_model_config_dict())
 
-    val_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Validation"),
-                                limit=args.limit)
+    val_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.DALI, DataConfig.LABEL_MAP,
+                                drop_last=ModelConfig.MODEL.__name__ == "LRCN",
+                                limit=args.limit, **get_model_config_dict())
 
     print(f"\nLoaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
+    print("Building model. . .", end="\r")
 
     model = build_model(ModelConfig.MODEL, **get_model_config_dict())
     # The summary does not work with an LSTM for some reason
-    if ModelConfig.NETWORK != "LRCN":
-        summary(model, (ModelConfig.SEQUENCE_LENGTH, 1 if ModelConfig.USE_GRAY_SCALE else 3,
+    if ModelConfig.MODEL.__name__ != "LRCN":
+        summary(model, (ModelConfig.SEQUENCE_LENGTH, 1 if ModelConfig.GRAYSCALE else 3,
                         ModelConfig.IMAGE_SIZES[0], ModelConfig.IMAGE_SIZES[1]))
 
     train(model, train_dataloader, val_dataloader)

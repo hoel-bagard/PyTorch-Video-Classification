@@ -1,7 +1,8 @@
 import itertools
 from typing import (
+    Dict,
     List,
-    Dict
+    Optional
 )
 
 
@@ -15,7 +16,7 @@ from src.dataset.build_dataloader import Dataloader
 
 class Metrics:
     def __init__(self, model: nn.Module, loss_fn: nn.Module, train_dataloader: Dataloader, val_dataloader: Dataloader,
-                 label_map: Dict[int, str], n_to_n: bool, output_classes: int, max_batches: int = 10):
+                 label_map: Dict[int, str], n_to_n: bool, max_batches: Optional[int] = 10):
         """
         Class computing usefull metrics for classification tasks
         Args:
@@ -35,7 +36,7 @@ class Metrics:
         self.val_dataloader = val_dataloader
         self.label_map = label_map
         self.n_to_n = n_to_n
-        self.output_classes = output_classes
+        self.output_classes = len(label_map)
         self.max_batches = max_batches
 
     def compute_confusion_matrix(self, mode: str = "Train"):

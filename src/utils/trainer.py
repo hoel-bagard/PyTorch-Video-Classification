@@ -40,7 +40,7 @@ class Trainer:
             inputs, labels = batch["video"], batch["label"]
 
             # TODO: Have "preprocessing" function as an optional arg in the init
-            if self.model.__name__ == "LRCN":
+            if self.model.__class__.__name__ == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)
@@ -71,7 +71,7 @@ class Trainer:
             inputs, labels = batch["video"], batch["label"]
 
             # TODO: Have "preprocessing" function as an optional arg in the init
-            if self.model.__name__ == "LRCN":
+            if self.model.__class__.__name__ == "LRCN":
                 self.model.reset_lstm_state(inputs.shape[0])
 
             outputs = self.model(inputs)

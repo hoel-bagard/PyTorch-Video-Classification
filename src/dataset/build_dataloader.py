@@ -9,11 +9,9 @@ import torch
 from torchvision.transforms import Compose
 from nvidia.dali.plugin import pytorch
 
-from .pytorch_dataset import Dataset
+from .pytorch_dataset import VideoDataset
 from .dali_dataloader import DALILoader
 import src.dataset.pytorch_transforms as transforms
-# from config.data_config import DataConfig
-# from config.model_config import ModelConfig
 
 
 class DataIterator(object):
@@ -29,7 +27,7 @@ class DataIterator(object):
     def __next__(self):
         batch = self.dataloader_iter.next()
         # DALI has an extra dimension (don't know why), and the data is already on GPU.
-        if self.dataloader.__name__ == "DALILoader":
+        if self.dataloader.__class__.__name__ == "DALILoader":
             batch = batch[0]
         else:
             batch["video"] = batch["video"].to(self.device).float()
@@ -44,7 +42,7 @@ class Dataloader(object):
     """Wrapper around the PyTorch / DALI DataLoaders"""
     def __init__(self, data_path: str, dali: bool, label_map: Dict[int, str], image_sizes: Tuple[int, int],
                  batch_size: int, num_workers: int, drop_last: bool = False,
-                 transform: Optional[type] = None, limit: Optional[int] = None, load_videos: bool = False):
+                 limit: Optional[int] = None, load_data: bool = False, **model_config):
         """
         Args:
             data_path: Path to the data to load
@@ -54,7 +52,6 @@ class Dataloader(object):
             batch_size: Batch size to use
             num_workers: Number of workers for the PyTorch DataLoader
             drop_last: Wether to drop last elements to get "perfect" batches, should be True for LSTMs
-            transform: PyTorch transforms (used if dali is set to False)
             limit: If not None then at most that number of elements will be used
             load_videos: If true then the videos will be loaded in RAM (when dali is set to False)
         """
@@ -85,10 +82,9 @@ class Dataloader(object):
                     transforms.ToTensor()
                 ])
 
-            dataset = Dataset(data_path,
-                              limit=limit,
-                              load_videos=load_videos,
-                              transform=data_transforms)
+            dataset = VideoDataset(data_path, label_map, model_config["n_to_n"], model_config["sequence_length"],
+                                   model_config["grayscale"], image_sizes, transform=data_transforms, limit=limit,
+                                   load_data=load_data)
             self.dataloader = torch.utils.data.DataLoader(dataset,
                                                           batch_size=batch_size,
                                                           shuffle=(mode == "Train"),

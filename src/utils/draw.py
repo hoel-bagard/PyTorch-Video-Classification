@@ -40,12 +40,6 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
 
     new_imgs = []
     for img, preds, label in zip(imgs, predictions, labels):
-        img = np.asarray(img * 255.0, dtype=np.uint8)
-
-        # TODO: Might not work, there used to always be a resize (even if to same size)
-        if size:
-            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-
         # Just print the top 3 classes
         # Gets indices of top 3 pred
         nb_to_keep = 3 if len(preds) > 3 else 2
@@ -53,10 +47,14 @@ def draw_pred(videos: torch.Tensor, predictions: torch.Tensor, labels: torch.Ten
         idx = idx[np.argsort(preds[idx])][::-1]
         preds = str([label_map[i] + f":  {round(float(preds[i]), 2)}" for i in idx])
 
+        img = np.asarray(img * 255.0, dtype=np.uint8)
+        if size:
+            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        img = cv2.UMat(img)
         img = cv2.putText(img, preds, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-        new_imgs.append(img)
+        new_imgs.append(img.get())
     return np.asarray(new_imgs)
 
 
@@ -85,12 +83,6 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
 
     new_video = []
     for img, preds, label in zip(video, preds, labels):
-        img = np.asarray(img * 255.0, dtype=np.uint8)
-
-        # TODO: Might not work, there used to always be a resize (even if to same size)
-        if size:
-            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
-
         # If there are too many classes, just print the top 3 ones
         if len(preds) > 5:
             # Gets indices of top 3 pred
@@ -100,10 +92,14 @@ def draw_pred_video(video: torch.Tensor, prediction: torch.Tensor, label: torch.
         else:
             preds_text = str([round(float(conf), 2) for conf in preds]) + f"  ==> {np.argmax(preds)}"
 
+        img = np.asarray(img * 255.0, dtype=np.uint8)
+        if size:
+            img = cv2.resize(img, size, interpolation=cv2.INTER_AREA)
+        img = cv2.UMat(img)
         img = cv2.putText(img, preds_text, (20, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
         img = cv2.putText(img, f"Label: {label}  ({label_map[label]})", (20, 40),
                           cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 0, 0), 1, cv2.LINE_AA)
-        new_video.append(img)
+        new_video.append(img.get())
 
     new_video = np.asarray(new_video)
 
