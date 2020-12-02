@@ -55,16 +55,16 @@ def main():
 
     train_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.DALI,
                                        DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
-                                       limit=args.limit, **get_model_config_dict())
+                                       num_workers=DataConfig.NUM_WORKERS, limit=args.limit, **get_model_config_dict())
 
     val_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.DALI,
                                      DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
-                                     limit=args.limit, **get_model_config_dict())
+                                     num_workers=DataConfig.NUM_WORKERS, limit=args.limit, **get_model_config_dict())
 
-    print(f"\nLoaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
+    print(f"Loaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
     print("Building model. . .", end="\r")
 
-    model = build_model(ModelConfig.MODEL, **get_model_config_dict())
+    model = build_model(ModelConfig.MODEL, DataConfig.OUTPUT_CLASSES, **get_model_config_dict())
     # The summary does not work with an LSTM for some reason
     if ModelConfig.MODEL.__name__ != "LRCN":
         summary(model, (ModelConfig.SEQUENCE_LENGTH, 1 if ModelConfig.GRAYSCALE else 3,

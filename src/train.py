@@ -19,8 +19,10 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
         loss_fn = CE_Loss()
     else:
         loss_fn = nn.CrossEntropyLoss()  # nn.NLLLoss()
+
+    on_epoch_begin = model.reset_lstm_state if model.__class__.__name__ == "LRCN" else None
     trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader, ModelConfig.BATCH_SIZE, ModelConfig.LR,
-                      ModelConfig.REG_FACTOR)
+                      ModelConfig.REG_FACTOR, on_epoch_begin=on_epoch_begin)
     scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
     if DataConfig.USE_TB:
         metrics = Metrics(model, loss_fn, train_dataloader, val_dataloader,
