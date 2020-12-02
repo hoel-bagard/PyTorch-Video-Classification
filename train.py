@@ -10,12 +10,9 @@ from torchsummary import summary
 
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
-from src.utils.config_to_kwargs import (
-    get_data_config_dict,
-    get_model_config_dict
-)
-from src.dataset.build_dataloader import Dataloader
-from src.networks.build_network import build_model
+from src.utils.config_to_kwargs import get_model_config_dict
+from src.torch_utils.dataset.build_video_dataloader import VideoDataloader
+from src.torch_utils.networks.build_network import build_model
 from src.train import train
 
 
@@ -56,13 +53,13 @@ def main():
 
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
 
-    train_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.DALI, DataConfig.LABEL_MAP,
-                                  drop_last=ModelConfig.MODEL.__name__ == "LRCN",
-                                  limit=args.limit, **get_model_config_dict())
+    train_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.DALI,
+                                       DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
+                                       limit=args.limit, **get_model_config_dict())
 
-    val_dataloader = Dataloader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.DALI, DataConfig.LABEL_MAP,
-                                drop_last=ModelConfig.MODEL.__name__ == "LRCN",
-                                limit=args.limit, **get_model_config_dict())
+    val_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.DALI,
+                                     DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
+                                     limit=args.limit, **get_model_config_dict())
 
     print(f"\nLoaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
     print("Building model. . .", end="\r")

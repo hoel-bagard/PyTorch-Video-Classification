@@ -15,7 +15,7 @@ einops
 
 ### Clone the repository
 ```
-git@github.com:hoel-bagard/PyTorch-Video-Classification.git
+git clone git@github.com:hoel-bagard/PyTorch-Video-Classification.git --recurse-submodules
 ```
 
 ### Get some data and format it:

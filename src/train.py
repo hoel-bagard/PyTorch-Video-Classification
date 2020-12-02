@@ -7,9 +7,9 @@ from torch.optim.lr_scheduler import ExponentialLR
 
 from config.model_config import ModelConfig
 from config.data_config import DataConfig
-from src.utils.trainer import Trainer
-from src.utils.tensorboard import TensorBoard
-from src.utils.metrics import Metrics
+from src.torch_utils.utils.trainer import Trainer
+from src.torch_utils.utils.tensorboard import TensorBoard
+from src.torch_utils.utils.metrics import Metrics
 from src.losses import CE_Loss
 
 
