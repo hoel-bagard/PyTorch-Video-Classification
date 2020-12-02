@@ -1,4 +1,7 @@
-from src.networks.build_network import ModelHelper
+from src.torch_utils.networks.build_network import (
+    ModelHelper,
+    FeatureExtractorHelper
+)
 
 
 class ModelConfig:
@@ -23,11 +26,11 @@ class ModelConfig:
     MODEL           = ModelHelper.Transformer
 
     # Feature Extractor
-    FEATURE_EXTRACTOR_MODEL = 1
+    FEATURE_EXTRACTOR = FeatureExtractorHelper.SimpleCNN  # Model to use to extract features from images
     # First value should be the number of channels in the input image,
     # there should be one more value in CHANNELS than in the other lists
     CHANNELS = [1 if GRAYSCALE else 3, 24, 32, 64, 64, 48, 32, 24, 16, 12]
     SIZES = [3, 3, 3, 3, 3, 3, 3, 3, 3]   # Kernel sizes
     STRIDES = [2, 2, 2, 2, 2, 2, 2, 2, 2]
     PADDINGS = [1, 1, 1, 1, 1, 1, 1, 1, 1]
-    NB_BLOCKS = [2, 2, 2, 1, 1, 1, 1, 1]  # Used if feature extractor is the darknet one
+    NB_BLOCKS = [2, 2, 2, 1, 1, 1, 1, 1, 1]  # Used if feature extractor is the darknet one
