@@ -55,11 +55,13 @@ def main():
 
     train_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.DALI,
                                        DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
-                                       num_workers=DataConfig.NUM_WORKERS, limit=args.limit, **get_model_config_dict())
+                                       num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
+                                       limit=args.limit, **get_model_config_dict())
 
     val_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.DALI,
                                      DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
-                                     num_workers=DataConfig.NUM_WORKERS, limit=args.limit, **get_model_config_dict())
+                                     num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
+                                     limit=args.limit, **get_model_config_dict())
 
     print(f"Loaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
     print("Building model. . .", end="\r")

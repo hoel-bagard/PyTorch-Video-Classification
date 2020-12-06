@@ -16,6 +16,7 @@ class DataConfig:
 
     # Dataloading part
     DALI = False  # Whether to use DALI for data loading or PyTorch/numpy
+    DALI_DEVICE_ID = 1  # If using DALI, which GPU to run it on (shards not suported yet)
     NUM_WORKERS = 12   # Number of workers for PyTorch dataloader
 
     # Build a map between id and names
