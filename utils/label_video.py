@@ -116,9 +116,10 @@ def make_video_timestamps(video_path):
 def main():
     parser = argparse.ArgumentParser("Tool to help label videos frame by frame")
     parser.add_argument("data_path", help='Path to the dataset')
-    parser.add_argument("--defect", default=None, type=str,
+    parser.add_argument("--defect", aliases=['d'], default=None, type=str,
                         help='If you wish to label one defect in particular (for exemple: "g1000")')
-    parser.add_argument("--output_path", default=None, type=str, help='Path to where the label file will be created')
+    parser.add_argument("--output_path", aliases=['out'], default=None, type=str,
+                        help='Path to where the label file will be created')
     args = parser.parse_args()
 
     output_path = args.output_path if args.output_path else os.path.join(args.data_path, "labels.json")

@@ -70,7 +70,7 @@ def show_video(video_path, labels: List[int], size: Tuple[int, int] = None) -> n
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("data_path", type=str, help="Path to dataset")
-    parser.add_argument("--defect", default=None, type=str, help="Displays only this type of defect")
+    parser.add_argument("--defect", aliases=['d'], default=None, type=str, help="Displays only this type of defect")
     parser.add_argument("--skip", action="store_true", help="Skips videos where the defect has been detected")
     args = parser.parse_args()
 
