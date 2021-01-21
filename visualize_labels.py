@@ -8,7 +8,7 @@ from typing import (
 import cv2
 import numpy as np
 
-from src.dataset.dataset_utils import n_to_n_loader
+from src.torch_utils.dataset.pytorch_video_dataset_utils import n_to_n_loader
 from config.data_config import DataConfig
 
 
@@ -34,7 +34,8 @@ def show_video(video_path, labels: List[int], size: Tuple[int, int] = None) -> n
             break
 
         # Crop
-        frame = frame[900:-400]
+        if "video-1" in video_path:
+            frame = frame[900:]
 
         if size:
             frame = cv2.resize(frame, size, interpolation=cv2.INTER_AREA)
