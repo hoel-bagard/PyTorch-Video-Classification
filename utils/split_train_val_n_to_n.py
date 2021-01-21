@@ -7,7 +7,7 @@ import shutil
 def main():
     parser = argparse.ArgumentParser("Validation/Train splitting")
     parser.add_argument('data_path', help='Path to the train dataset')
-    parser.add_argument('--split', aliases=['s'], type=float, default=0.85, help='Split percentage')
+    parser.add_argument('--split', "-s", type=float, default=0.85, help='Split percentage')
     args = parser.parse_args()
 
     print("The way it's implemented, splitting is done by video and not by subfolder...")

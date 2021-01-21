@@ -18,8 +18,8 @@ from src.train import train
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--limit", aliases=['l'], default=None, type=int, help="Limits the number of apparition of each class")
-    parser.add_argument("--load_data", aliases=['ld'], action="store_true", help="Loads all the videos into RAM")
+    parser.add_argument("--limit", "-l", default=None, type=int, help="Limits the number of apparition of each class")
+    parser.add_argument("--load_data", "-ld", action="store_true", help="Loads all the videos into RAM")
     args = parser.parse_args()
 
     if not DataConfig.KEEP_TB:
