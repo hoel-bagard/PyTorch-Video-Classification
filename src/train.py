@@ -34,6 +34,13 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
     last_checkpoint_epoch = 0
     train_start_time = time.time()
 
+    preprocess_fn = getattr(model, "preprocess", None)
+    if not callable(preprocess_fn):
+        preprocess_fn = None
+    postprocess_fn = getattr(model, "postprocess", None)
+    if not callable(postprocess_fn):
+        postprocess_fn = None
+
     try:
         for epoch in range(ModelConfig.MAX_EPOCHS):
             epoch_start_time = time.perf_counter()
@@ -65,15 +72,19 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                         tensorboard.write_loss(epoch, epoch_loss, mode="Validation")
 
                         # Metrics for the Train dataset
-                        tensorboard.write_images(epoch, train_dataloader)
+                        tensorboard.write_images(epoch, train_dataloader, input_is_video=True,
+                                                 preprocess_fn=preprocess_fn, postprocess_fn=postprocess_fn)
                         if epoch % (3*DataConfig.VAL_FREQ) == 0:
-                            tensorboard.write_videos(epoch, train_dataloader)
+                            tensorboard.write_videos(epoch, train_dataloader,
+                                                     preprocess_fn=preprocess_fn, postprocess_fn=postprocess_fn)
                         train_acc = tensorboard.write_metrics(epoch)
 
                         # Metrics for the Validation dataset
-                        tensorboard.write_images(epoch, val_dataloader, mode="Validation")
+                        tensorboard.write_images(epoch, val_dataloader, mode="Validation", input_is_video=True,
+                                                 preprocess_fn=preprocess_fn, postprocess_fn=postprocess_fn)
                         if epoch % (3*DataConfig.VAL_FREQ) == 0:
-                            tensorboard.write_videos(epoch, val_dataloader, mode="Validation")
+                            tensorboard.write_videos(epoch, val_dataloader, mode="Validation",
+                                                     preprocess_fn=preprocess_fn, postprocess_fn=postprocess_fn)
                         val_acc = tensorboard.write_metrics(epoch, mode="Validation")
 
                         print(f"Train accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}",

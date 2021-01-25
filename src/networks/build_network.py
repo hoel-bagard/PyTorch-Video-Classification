@@ -8,11 +8,13 @@ from .cnn_feature_extractor import (
 )
 from .lrcn_network import LRCN
 from .transformer_network import Transformer
+from .conv3d_network import Conv3DNet
 
 
 class ModelHelper:
     LRCN = LRCN
     Transformer = Transformer
+    Conv3DNet = Conv3DNet
 
 
 class FeatureExtractorHelper:

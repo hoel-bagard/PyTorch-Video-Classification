@@ -3,11 +3,14 @@ from typing import Callable
 from einops import rearrange
 import torch
 import torch.nn as nn
+import torch.nn.Functional as F
 
-from .network_utils import (
+from config.model_config import ModelConfig
+from src.torch_utils.networks.network_utils import (
     layer_init,
     get_cnn_output_size
 )
+from src.torch_utils.utils.tensorboard import TensorBoard
 
 
 class LRCN(nn.Module):
@@ -63,3 +66,11 @@ class LRCN(nn.Module):
 
         self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device),
                             torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device))
+
+    @staticmethod
+    def preprocess(tensorboard: TensorBoard, videos, labels) -> (torch.Tensor, torch.Tensor):
+        # LSTM needs proper batches (the pytorch implementation at least)
+        batch_size = videos.size()[0]
+        videos = F.pad(videos, (0, 0, 0, 0, 0, 0, 0, ModelConfig.BATCH_SIZE-batch_size))
+        tensorboard.model.reset_lstm_state(videos.shape[0])
+        return videos, labels
