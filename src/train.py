@@ -21,14 +21,17 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
         loss_fn = nn.CrossEntropyLoss()  # nn.NLLLoss()
 
     on_epoch_begin = model.reset_lstm_state if model.__class__.__name__ == "LRCN" else None
-    trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader, ModelConfig.BATCH_SIZE, ModelConfig.LR,
-                      ModelConfig.REG_FACTOR, on_epoch_begin=on_epoch_begin)
-    scheduler = ExponentialLR(trainer.optimizer, gamma=ModelConfig.LR_DECAY)
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=ModelConfig.LR, weight_decay=ModelConfig.REG_FACTOR)
+    trainer = Trainer(model, loss_fn, train_dataloader, val_dataloader, ModelConfig.BATCH_SIZE,
+                      optimizer=optimizer, on_epoch_begin=on_epoch_begin)
+    scheduler = ExponentialLR(optimizer, gamma=ModelConfig.LR_DECAY)
     if DataConfig.USE_TB:
         metrics = Metrics(model, loss_fn, train_dataloader, val_dataloader,
-                          DataConfig.LABEL_MAP, ModelConfig.N_TO_N, max_batches=None)
+                          DataConfig.LABEL_MAP, n_to_n=ModelConfig.N_TO_N, max_batches=None)
         tensorboard = TensorBoard(model, metrics, DataConfig.LABEL_MAP, DataConfig.TB_DIR, ModelConfig.SEQUENCE_LENGTH,
-                                  ModelConfig.N_TO_N, ModelConfig.GRAYSCALE, ModelConfig.IMAGE_SIZES)
+                                  ModelConfig.N_TO_N, ModelConfig.GRAYSCALE, ModelConfig.IMAGE_SIZES,
+                                  write_graph=model.__class__.__name__ != "LRCN")
 
     best_loss = 1000
     last_checkpoint_epoch = 0

@@ -1,4 +1,7 @@
-from typing import Callable
+from typing import (
+    Union,
+    Callable
+)
 
 from einops import rearrange
 import torch
@@ -11,6 +14,7 @@ from src.torch_utils.networks.network_utils import (
     get_cnn_output_size
 )
 from src.torch_utils.utils.tensorboard import TensorBoard
+from src.torch_utils.utils.trainer import Trainer
 
 
 class LRCN(nn.Module):
@@ -54,7 +58,8 @@ class LRCN(nn.Module):
         # F.log_softmax(x, dim=-1)
         return x
 
-    def reset_lstm_state(self, batch_size: int):
+    # TODO: Find a better name for "batch_size"
+    def reset_lstm_state(self, batch_size: Union[int, Trainer]):
         """
         Args:
             batch_size: Needs to be the same as the size of the next batch.
@@ -63,6 +68,9 @@ class LRCN(nn.Module):
         # Debug. Slows down training.
         # del self.hidden_cell
         # torch.cuda.empty_cache()
+
+        if isinstance(batch_size, Trainer):
+            batch_size: int = batch_size.batch_size
 
         self.hidden_cell = (torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device),
                             torch.zeros(self.num_layers, batch_size, self.hidden_size, device=self.device))

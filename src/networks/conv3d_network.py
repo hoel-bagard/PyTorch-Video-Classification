@@ -4,43 +4,57 @@ from typing import (
 )
 
 from einops import rearrange
+import numpy as np
 import torch
 import torch.nn as nn
 
-from .network_utils import (
+from src.torch_utils.networks.network_utils import (
     layer_init,
     get_cnn_output_size
 )
-from .layers import Conv3D
+from config.model_config import ModelConfig
+from src.torch_utils.networks.layers import Conv3D
 
 
 class Conv3DNet(nn.Module):
-    def __init__(self, feature_extractor: nn.Module, batch_size: int,
-                 output_classes: int, n_to_n: bool, sequence_length: int,
-                 dim_feedforward: int = 512, nlayers: int = 3,
+    def __init__(self, feature_extractor: nn.Module, output_classes: int, n_to_n: bool, sequence_length: int,
                  layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
         """
         CNN feature extractor followed by a few 3D convolutions
         Args:
             feature_extractor: CNN to use as a feature extractor
-            batch_size: batch size
             output_classes: Number of output classes (classification)
             n_to_n: Whether the model should be N_To_N or N_to_1
             sequence_length: Length of the input sequence
-            dim_feedforward: Dimension of the fc layers in the transformer encoder part
-            nlayers: Number of sub-encoder-layers in the encoder
             layer_init: Function used to initialise the layers of the network
         """
         super().__init__()
         self.n_to_n = n_to_n
+        self.sequence_length = sequence_length
         self.feature_extractor_output_shape: Tuple[int, int] = get_cnn_output_size(**kwargs, dense=False)
 
         self.feature_extractor = feature_extractor
-        self.net_3D = torch.nn.Sequential(
-            Conv3D(kwargs["channels"][-1], 8, kernel_size=(2, 3, 3), stride=(1, 2, 2)),
-            Conv3D(8, 4, kernel_size=(2, 3, 3)),
-            Conv3D(4, 4, kernel_size=(2, 3, 3)),
-            Conv3D(4, output_classes, kernel_size=(2, 6, 4), activation=None, use_batch_norm=False))
+
+        conv3D_channels = ModelConfig.CONV3D_CHANNELS
+        conv3D_kernels = ModelConfig.CONV3D_KERNELS
+        conv3D_strides = ModelConfig.CONV3D_STRIDES
+        # TODO: Add padding support
+        self.blocks = nn.Sequential(
+            *[Conv3D(conv3D_channels[i], conv3D_channels[i+1], kernel_size=conv3D_kernels[i], stride=conv3D_strides[i])
+              for i in range(0, len(conv3D_channels)-1)],
+            # Default activation and BN since there is a dense layer at the end
+            Conv3D(conv3D_channels[-1], output_classes, kernel_size=conv3D_kernels[-1], stride=conv3D_strides[-1])
+        )
+
+        conv3D_output_shape = self.net_3D(torch.zeros(1, ModelConfig.CHANNELS[-1],
+                                                      ModelConfig.SEQUENCE_LENGTH, *self.feature_extractor_output_shape,
+                                                      device="cpu")).shape
+        assert not self.n_to_n or self.sequence_length == conv3D_output_shape[2], "Sequence length must not be modified"
+
+        if self.n_to_n:
+            self.dense = nn.Linear(np.prod(conv3D_output_shape[1:]), output_classes)
+        else:
+            self.dense = nn.Linear(conv3D_output_shape[1] * np.prod(conv3D_output_shape[:3]), output_classes)
 
         if layer_init:
             self.apply(layer_init)
@@ -53,13 +67,14 @@ class Conv3DNet(nn.Module):
         x = rearrange(x, "b t c h w -> b c t h w")
         print(f"Shape before 3D conv {x.size()}")
         x = self.net_3D(x)
+        x = rearrange(x, "b c t h w -> b t h w c")
 
-        # if self.n_to_n:
-        #     print("N to N not implemented for 3DNet")
-        #     exit()
-        # else:
-        #     print("N to 1 not implemented for 3DNet")
-        #     exit()
+        if self.n_to_n:
+            x = torch.flatten(x, start_dim=2)
+            x = self.dense(x)
+        else:
+            x = torch.flatten(x, start_dim=1)
+            x = self.dense(x)
         return x
 
 

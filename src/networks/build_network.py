@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from .cnn_feature_extractor import (
+from src.torch_utils.networks.cnn_feature_extractor import (
     CNNFeatureExtractor,
     DarknetFeatureExtrator
 )
