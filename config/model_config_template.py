@@ -3,7 +3,7 @@ from typing import (
     Tuple
 )
 
-from src.torch_utils.networks.build_network import (
+from src.networks.build_network import (
     ModelHelper,
     FeatureExtractorHelper
 )

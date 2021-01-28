@@ -3,8 +3,8 @@ from typing import Callable
 from einops import rearrange
 import torch.nn as nn
 
-from .transformer_layer import TransformerLayer
-from .network_utils import (
+from src.torch_utils.networks.transformer_layer import TransformerLayer
+from src.torch_utils.networks.network_utils import (
     layer_init,
     get_cnn_output_size
 )

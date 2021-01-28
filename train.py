@@ -12,7 +12,7 @@ from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.utils.config_to_kwargs import get_model_config_dict
 from src.torch_utils.dataset.build_video_dataloader import VideoDataloader
-from src.torch_utils.networks.build_network import build_model
+from src.networks.build_network import build_model
 from src.train import train
 
 

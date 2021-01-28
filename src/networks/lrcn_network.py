@@ -1,14 +1,14 @@
 from typing import (
     Union,
+    Final,
     Callable
 )
 
 from einops import rearrange
 import torch
 import torch.nn as nn
-import torch.nn.Functional as F
+import torch.nn.functional as F
 
-from config.model_config import ModelConfig
 from src.torch_utils.networks.network_utils import (
     layer_init,
     get_cnn_output_size
@@ -33,6 +33,7 @@ class LRCN(nn.Module):
         """
         super().__init__()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.batch_size: Final[int] = batch_size
 
         cnn_output_size = get_cnn_output_size(**kwargs, output_channels=kwargs["channels"][-1])
 
@@ -79,6 +80,6 @@ class LRCN(nn.Module):
     def preprocess(tensorboard: TensorBoard, videos, labels) -> (torch.Tensor, torch.Tensor):
         # LSTM needs proper batches (the pytorch implementation at least)
         batch_size = videos.size()[0]
-        videos = F.pad(videos, (0, 0, 0, 0, 0, 0, 0, ModelConfig.BATCH_SIZE-batch_size))
+        videos = F.pad(videos, (0, 0, 0, 0, 0, 0, 0, tensorboard.batch_size-batch_size))
         tensorboard.model.reset_lstm_state(videos.shape[0])
         return videos, labels
