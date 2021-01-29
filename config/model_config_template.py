@@ -44,3 +44,4 @@ class ModelConfig:
     CONV3D_CHANNELS: list[int] = [CHANNELS[-1], 8, 4, 4]  # Number of input channels for each 3Dconv
     CONV3D_KERNELS: list[Union[int, Tuple[int, int, int]]] = [(2, 3, 3), (2, 3, 3), (2, 3, 3), (2, 6, 4)]
     CONV3D_STRIDES: list[Union[int, Tuple[int, int, int]]]  = [(1, 2, 2), 1, 1, 1]
+    CONV3D_PADDING: list[Union[int, Tuple[int, int, int]]] = [1, 1, 1, 1]

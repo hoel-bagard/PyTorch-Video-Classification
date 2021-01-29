@@ -22,7 +22,7 @@ from src.torch_utils.networks.layers import (
 class Conv3DNet(nn.Module):
     def __init__(self, feature_extractor: nn.Module, conv3d_channels: List[int],
                  conv3d_kernels: List[Union[int, Tuple[int, int, int]]], conv3d_strides: List[Union[int, Tuple[int, int, int]]],
-                 output_classes: int, n_to_n: bool, sequence_length: int,
+                 conv3d_padding: List[Union[int, Tuple[int, int, int]]], output_classes: int, n_to_n: bool, sequence_length: int,
                  layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
         """
         CNN feature extractor followed by a few 3D convolutions
@@ -46,11 +46,12 @@ class Conv3DNet(nn.Module):
         self.input_to_conv2D = Rearrange("b t c h w -> (b t) c h w")
         self.conv2D_to_conv3D = Rearrange("b t c h w -> b c t h w")
 
-        # TODO: Add padding support
         self.net_3D = nn.Sequential(
-            *[Conv3D(conv3d_channels[i], conv3d_channels[i+1], kernel_size=conv3d_kernels[i], stride=conv3d_strides[i])
+            *[Conv3D(conv3d_channels[i], conv3d_channels[i+1], kernel_size=conv3d_kernels[i], stride=conv3d_strides[i],
+                     padding=conv3d_padding)
               for i in range(0, len(conv3d_channels)-1)],
-            Conv3D(conv3d_channels[-1], output_classes, kernel_size=conv3d_kernels[-1], stride=conv3d_strides[-1])
+            Conv3D(conv3d_channels[-1], output_classes, kernel_size=conv3d_kernels[-1], stride=conv3d_strides[-1],
+                   padding=conv3d_padding)
         )
         self.conv3D_to_dense = Rearrange("b c t h w -> b t h w c")
 
