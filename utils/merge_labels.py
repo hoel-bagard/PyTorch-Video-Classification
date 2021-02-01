@@ -1,4 +1,4 @@
-import argparse
+from argparse import ArgumentParser
 import json
 from pathlib import Path
 import shutil
@@ -6,7 +6,7 @@ from typing import Dict
 
 
 def main():
-    parser = argparse.ArgumentParser("Script to merge multiple label files into one file")
+    parser = ArgumentParser("Script to merge multiple label files into one file")
     parser.add_argument("input_path", type=Path, help='Path to the folder with all the label files')
     parser.add_argument("--output_path", "--o", default='.', type=Path,
                         help='Path to the directory where the label file will be created')
@@ -14,7 +14,7 @@ def main():
 
     output_path: Path = args.output_path / "labels.json"
     assert not output_path.exists(), f"There is already a label file at {str(output_path)}"
-    args.output_path.mkdir()
+    args.output_path.mkdir(parents=True)
 
     files = args.input_path.glob("*.json")
     nb_files = len(files)
@@ -26,10 +26,7 @@ def main():
         's': "steel",
         'f': "fiber"
     }
-
-    # Creates empty json
-    aggregated_labels = {"entries": []}
-    aggregated_entries = aggregated_labels["entries"]
+    aggregated_entries = []
 
     for file_index, file_name in enumerate(files):
         msg = f"Processing file {file_name},   ({file_index}/{nb_files})"
@@ -46,11 +43,12 @@ def main():
             file_path = Path(sample_class, *file_path)
             entry["file_path"] = file_path
             aggregated_entries.append(entry)
+    aggregated_entries.sort(key=lambda x: x["file_path"])
 
     # Write everything to disk
     print(f"\nWriting labels to {output_path}")
     with open(output_path, 'w') as label_file:
-        json.dump(aggregated_labels, label_file, indent=4)
+        json.dump({"entries": aggregated_entries}, label_file, indent=4)
 
     print("Finished labelling dataset")
 
