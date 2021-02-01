@@ -28,7 +28,7 @@ def main():
             if i >= 0.85*nb_files:
                 shutil.move(file_path, os.path.join(val_path, label_map[key], os.path.basename(file_path)))
         print(f"Finished splitting {label_map[key]}"
-              + ' ' * (os.get_terminal_size().columns-len("Finished splitting {label_map[key]}")))
+              + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns-len("Finished splitting {label_map[key]}")))
     print("\nFinished splitting dataset")
 
 

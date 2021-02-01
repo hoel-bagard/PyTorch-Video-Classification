@@ -36,7 +36,7 @@ def main():
     for i, label in enumerate(train_entries, start=1):
         video_path = os.path.join(args.data_path, label["file_path"])
         msg = f"Processing data {video_path}    ({i}/{nb_labels})"
-        print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
+        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
 
         assert os.path.isfile(video_path), f"Video {video_path} is missing"
 

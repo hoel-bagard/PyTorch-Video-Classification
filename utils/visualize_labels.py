@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 from typing import (
     List,
     Tuple,
@@ -130,7 +131,7 @@ def main():
 
         assert os.path.isfile(video_path), f"Video {video_path} is missing"
         msg = f"Loading data {video_path}    ({i}/{nb_labels})"
-        print(msg + ' ' * (os.get_terminal_size()[0] - len(msg)), end="\r")
+        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
 
         # Get number of frame in the video
         cap = cv2.VideoCapture(video_path)

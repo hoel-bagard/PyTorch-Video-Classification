@@ -118,7 +118,7 @@ def main():
     parser.add_argument("data_path", help='Path to the dataset')
     parser.add_argument("--defect", "-d", default=None, type=str,
                         help='If you wish to label one defect in particular (for exemple: "g1000")')
-    parser.add_argument("--output_path", "out", default=None, type=str,
+    parser.add_argument("--output_path", "--o", default=None, type=str,
                         help='Path to where the label file will be created')
     args = parser.parse_args()
 
