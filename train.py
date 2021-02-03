@@ -1,7 +1,6 @@
 from torch.utils.tensorboard import SummaryWriter  # noqa: F401  # Needs to be there to avoid segfaults
 import argparse
-import os
-import glob
+from pathlib import Path
 import shutil
 import time
 
@@ -11,7 +10,7 @@ from torchsummary import summary
 from config.data_config import DataConfig
 from config.model_config import ModelConfig
 from src.utils.config_to_kwargs import get_model_config_dict
-from src.torch_utils.dataset.build_video_dataloader import VideoDataloader
+from src.dataset.build_video_dataloader import VideoDataloader
 from src.networks.build_network import build_model
 from src.train import train
 
@@ -23,42 +22,42 @@ def main():
     args = parser.parse_args()
 
     if not DataConfig.KEEP_TB:
-        while os.path.exists(DataConfig.TB_DIR):
+        while DataConfig.TB_DIR.exists():
             shutil.rmtree(DataConfig.TB_DIR, ignore_errors=True)
             time.sleep(0.5)
-    os.makedirs(DataConfig.TB_DIR, exist_ok=True)
+    DataConfig.TB_DIR.mkdir(parents=True, exist_ok=True)
 
     if DataConfig.USE_CHECKPOINT:
         if not DataConfig.KEEP_CHECKPOINTS:
-            while os.path.exists(DataConfig.CHECKPOINT_DIR):
+            while DataConfig.CHECKPOINT_DIR.exists():
                 shutil.rmtree(DataConfig.CHECKPOINT_DIR, ignore_errors=True)
                 time.sleep(0.5)
         try:
-            os.makedirs(DataConfig.CHECKPOINT_DIR, exist_ok=False)
+            DataConfig.CHECKPOINT_DIR.mkdir(parents=True, exist_ok=False)
         except FileExistsError:
             print(f"The checkpoint dir {DataConfig.CHECKPOINT_DIR} already exists")
             return -1
 
         # Makes a copy of all the code (and config) so that the checkpoints are easy to load and use
-        output_folder = os.path.join(DataConfig.CHECKPOINT_DIR, "Classification-PyTorch")
-        for filepath in glob.glob(os.path.join("**", "*.py"), recursive=True):
-            destination_path = os.path.join(output_folder, filepath)
-            os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+        output_folder = DataConfig.CHECKPOINT_DIR / "Classification-PyTorch"
+        for filepath in list(Path(".").glob("**/*.py")):
+            destination_path = output_folder / filepath
+            destination_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(filepath, destination_path)
-        # shutil.copytree(".git", os.path.join(output_folder, ".git"))
+        # shutil.copytree(".git", output_folder / ".git")
         misc_files = ["README.md", "requirements.txt", "setup.cfg", ".gitignore"]
         for misc_file in misc_files:
-            shutil.copy(misc_file, os.path.join(output_folder, misc_file))
+            shutil.copy(misc_file, output_folder / misc_file)
         print("Finished copying files")
 
     torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
 
-    train_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Train"), DataConfig.DALI,
+    train_dataloader = VideoDataloader(DataConfig.DATA_PATH / "Train", DataConfig.DALI, DataConfig.LOAD_FROM_IMAGES,
                                        DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
                                        num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
                                        limit=args.limit, **get_model_config_dict())
 
-    val_dataloader = VideoDataloader(os.path.join(DataConfig.DATA_PATH, "Validation"), DataConfig.DALI,
+    val_dataloader = VideoDataloader(DataConfig.DATA_PATH / "Validation", DataConfig.DALI, DataConfig.LOAD_FROM_IMAGES,
                                      DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
                                      num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
                                      limit=args.limit, **get_model_config_dict())

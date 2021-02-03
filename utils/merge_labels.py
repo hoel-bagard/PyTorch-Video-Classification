@@ -14,10 +14,10 @@ def main():
 
     output_path: Path = args.output_path / "labels.json"
     assert not output_path.exists(), f"There is already a label file at {str(output_path)}"
-    args.output_path.mkdir(parents=True)
+    args.output_path.mkdir(parents=True, exist_ok=True)
 
-    files = args.input_path.glob("*.json")
-    nb_files = len(files)
+    files = list(args.input_path.glob("*.json"))
+    nb_files = len(list(files))
 
     class_dict: Dict = {
         'g': "glass",
@@ -28,11 +28,11 @@ def main():
     }
     aggregated_entries = []
 
-    for file_index, file_name in enumerate(files):
+    for file_index, file_name in enumerate(files, start=1):
         msg = f"Processing file {file_name},   ({file_index}/{nb_files})"
         print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
 
-        with open(output_path) as json_file:
+        with open(file_name) as json_file:
             json_data = json.load(json_file)
             entries = json_data["entries"]
 
@@ -41,7 +41,7 @@ def main():
             file_path = file_path.split(sep='/')[1:]   # Removes the "data"
             sample_class = class_dict[file_path[0][0]]
             file_path = Path(sample_class, *file_path)
-            entry["file_path"] = file_path
+            entry["file_path"] = str(file_path)
             aggregated_entries.append(entry)
     aggregated_entries.sort(key=lambda x: x["file_path"])
 

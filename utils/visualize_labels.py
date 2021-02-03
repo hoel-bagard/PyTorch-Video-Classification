@@ -38,6 +38,9 @@ def read_n_to_n_label(label: str, label_map: Dict[int, str], video_length: int) 
     visibility_status = False
     labels = np.full(video_length, not_visible_cls)
     for i in range(len(label["time_stamps"])):
+        # Skip duplicates if there happens to be some
+        if i > 0 and label["time_stamps"][i] == label["time_stamps"][i-1]:
+            continue
         visibility_status = not visibility_status
         if visibility_status:
             if i != len(label["time_stamps"])-1:
