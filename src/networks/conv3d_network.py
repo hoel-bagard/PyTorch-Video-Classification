@@ -41,17 +41,21 @@ class Conv3DNet(nn.Module):
         self.sequence_length = sequence_length
         self.feature_extractor = feature_extractor
 
-        self.feature_extractor_output_shape: Tuple[int, int] = get_cnn_output_size(**kwargs, dense=False)
+        # self.feature_extractor_output_shape: Tuple[int, int] = get_cnn_output_size(**kwargs, dense=False)
+        conv2D_output_shape = self.feature_extractor(torch.zeros(1, 3,
+                                                                 *kwargs["image_sizes"],
+                                                                 device="cpu")).shape
+        self.feature_extractor_output_shape: Tuple[int, int] = conv2D_output_shape[2:]
 
         self.input_to_conv2D = Rearrange("b t c h w -> (b t) c h w")
         self.conv2D_to_conv3D = Rearrange("b t c h w -> b c t h w")
 
         self.net_3D = nn.Sequential(
             *[Conv3D(conv3d_channels[i], conv3d_channels[i+1], kernel_size=conv3d_kernels[i], stride=conv3d_strides[i],
-                     padding=conv3d_padding)
+                     padding=conv3d_padding[i])
               for i in range(0, len(conv3d_channels)-1)],
             Conv3D(conv3d_channels[-1], output_classes, kernel_size=conv3d_kernels[-1], stride=conv3d_strides[-1],
-                   padding=conv3d_padding)
+                   padding=conv3d_padding[-1])
         )
         self.conv3D_to_dense = Rearrange("b c t h w -> b t h w c")
 

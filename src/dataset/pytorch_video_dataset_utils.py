@@ -90,7 +90,7 @@ def read_n_to_n_label(label: str, label_map: Dict[int, str], video_length: int) 
                 labels[label["time_stamps"][i]:label["time_stamps"][i+1]] = video_cls
             else:
                 labels[label["time_stamps"][i]:] = video_cls
-    return np.asarray(labels)
+    return np.asarray(labels, dtype=np.uint8)
 
 
 def n_to_n_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[int] = None,
@@ -188,9 +188,6 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit:
 
         image_paths = list(sample_base_path.glob("*.jpg"))
         image_paths = sorted([str(image_path) for image_path in image_paths])
-        print(np.asarray(image_paths))
-        print("pytorch_video_dataset_utils")
-        exit()
 
         assert len(image_paths), f"Images for video {str(sample_base_path)} are missing"
 

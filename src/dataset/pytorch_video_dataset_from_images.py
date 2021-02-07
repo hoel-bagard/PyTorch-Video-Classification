@@ -42,26 +42,27 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
         self.image_sizes = image_sizes
 
         assert n_to_n, "N to 1 mode is not yet suported is loading from images"
-        self.labels = n_to_n_loader_from_images(data_path, label_map,
-                                                limit=limit, load_videos=load_data, grayscale=grayscale)
+        self.data = n_to_n_loader_from_images(data_path, label_map,
+                                              limit=limit, load_videos=load_data, grayscale=grayscale)
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.data)
 
     def __getitem__(self, i):
         if torch.is_tensor(i):
             i = i.tolist()
 
-        start = random.randint(0, len(self.labels[i, 0]) - self.sequence_length)
+        start = random.randint(0, len(self.data[i, 0]) - self.sequence_length)
         if self.load_data:
-            video = self.labels[i, 0].astype(np.uint8)
+            video = self.data[i, 0].astype(np.uint8)
             video = video[start:start+self.sequence_length]
         else:
             video = [cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-                     for image_path in self.labels[i, 0, start:start+self.sequence_length]]
+                     for image_path in self.data[i, 0, start:start+self.sequence_length]]
 
-        label = self.labels[i, 1][start:start+self.sequence_length]
-        sample = {"data": video, "label": label}
+        label = self.data[i, 1][start:start+self.sequence_length].astype(np.uint8)
+
+        sample = {"data": np.asarray(video, dtype=np.uint8), "label": label}
 
         if self.transform:
             sample = self.transform(sample)

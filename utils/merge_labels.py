@@ -41,7 +41,7 @@ def main():
             file_path = file_path.split(sep='/')[1:]   # Removes the "data"
             sample_class = class_dict[file_path[0][0]]
             file_path = Path(sample_class, *file_path)
-            entry["file_path"] = str(file_path)
+            entry["file_path"] = str(file_path)[:-4]
             aggregated_entries.append(entry)
     aggregated_entries.sort(key=lambda x: x["file_path"])
 

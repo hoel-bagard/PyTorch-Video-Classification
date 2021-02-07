@@ -46,8 +46,7 @@ def main():
 
             # Saves image of the current frame in jpg file
             img_output_path = output_path / str(video_path)[:-4] / (str(frame_count).zfill(3) + ".jpg")
-            if not img_output_path.parent.exists():
-                img_output_path.parent.mkdir(parents=True, exist_ok=True)
+            img_output_path.parent.mkdir(parents=True, exist_ok=True)
             cv2.imwrite(str(img_output_path), frame, [int(cv2.IMWRITE_JPEG_QUALITY), 90])
             frame_count += 1
 

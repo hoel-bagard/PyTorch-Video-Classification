@@ -30,7 +30,8 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
         metrics = Metrics(model, loss_fn, train_dataloader, val_dataloader,
                           DataConfig.LABEL_MAP, n_to_n=ModelConfig.N_TO_N, max_batches=None)
         tensorboard = TensorBoard(model, metrics, DataConfig.LABEL_MAP, DataConfig.TB_DIR,
-                                  ModelConfig.GRAYSCALE, ModelConfig.IMAGE_SIZES, ModelConfig.N_TO_N,
+                                  ModelConfig.GRAYSCALE, ModelConfig.IMAGE_SIZES, ModelConfig.BATCH_SIZE,
+                                  ModelConfig.N_TO_N,
                                   write_graph=model.__class__.__name__ != "LRCN",
                                   sequence_length=ModelConfig.SEQUENCE_LENGTH)
 

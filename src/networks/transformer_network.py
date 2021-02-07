@@ -1,6 +1,8 @@
 from typing import Callable
 
 from einops import rearrange
+import numpy as np
+import torch
 import torch.nn as nn
 
 from src.torch_utils.networks.transformer_layer import TransformerLayer
@@ -30,7 +32,11 @@ class Transformer(nn.Module):
         super().__init__()
         self.feature_extractor = feature_extractor
         self.n_to_n = n_to_n
-        self.cnn_output_size = get_cnn_output_size(**kwargs, output_channels=kwargs["channels"][-1])
+        # self.cnn_output_size = get_cnn_output_size(**kwargs, output_channels=kwargs["channels"][-1])
+        conv2D_output_shape = feature_extractor(torch.zeros(1, 3,
+                                                            *kwargs["image_sizes"],
+                                                            device="cpu")).shape
+        self.cnn_output_size = np.prod(conv2D_output_shape[1:])
 
         self.transformer = TransformerLayer(self.cnn_output_size, output_classes,
                                             dim_feedforward=dim_feedforward, nlayers=n_layers)

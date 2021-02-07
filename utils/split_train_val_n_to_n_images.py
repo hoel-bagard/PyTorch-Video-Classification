@@ -37,7 +37,7 @@ def main():
         print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
 
         # Checks that the data is there, if not "remove" it from the labels
-        image_paths = list(sample_base_path.parent.glob(str(sample_base_path.name) + "*.jpg"))
+        image_paths = list(sample_base_path.glob("*.jpg"))
         # assert len(image_paths), f"Images for video {str(sample_base_path)} are missing"
         if not len(image_paths):
             continue
@@ -45,7 +45,7 @@ def main():
 
         if i >= args.split*nb_labels:
             for image_path in image_paths:
-                files_to_move[image_path] = (val_path / label["file_path"]).parent / image_path.name
+                files_to_move[image_path] = (val_path / label["file_path"]) / image_path.name
             val_entries.append(label)
         else:
             new_train_entries.append(label)
