@@ -20,8 +20,8 @@ class VideoDataloader(object):
     """Wrapper around the PyTorch / DALI video dataLoaders"""
     def __init__(self, data_path: Path, dali: bool, load_from_images: bool, label_map: Dict[int, str],
                  image_sizes: Tuple[int, int], batch_size: int, num_workers: int,
-                 dali_device_id: int = 0, drop_last: bool = False, limit: Optional[int] = None, load_data: bool = False,
-                 **model_config):
+                 dali_device_id: int = 0, drop_last: bool = False, limit: Optional[int] = None,
+                 defects: Optional[list[str]] = None, load_data: bool = False, **model_config):
         """
         Args:
             data_path: Path to the data to load
@@ -34,6 +34,7 @@ class VideoDataloader(object):
             dali_device_id: If using DALI, which GPU to use
             drop_last: Wether to drop last elements to get "perfect" batches, should be True for LSTMs
             limit: If not None then at most that number of elements will be used
+            defects: Filters given defects (for exemple: ["g1000", "s1000"])
             load_data: If true then the videos will be loaded in RAM (when dali is set to False)
         """
         self.dali: bool = dali
@@ -72,8 +73,7 @@ class VideoDataloader(object):
             if load_from_images:
                 self.dataset = DatasetFromImages(data_path, label_map, self.n_to_n, model_config["sequence_length"],
                                                  model_config["grayscale"], image_sizes, transform=data_transforms,
-                                                 limit=limit, load_data=load_data)
-
+                                                 limit=limit, defects=defects, load_data=load_data)
             else:
                 self.dataset = PytorchVideoDataset(data_path, label_map, self.n_to_n, model_config["sequence_length"],
                                                    model_config["grayscale"], image_sizes, transform=data_transforms,

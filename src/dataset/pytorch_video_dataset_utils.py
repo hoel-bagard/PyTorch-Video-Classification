@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import shutil
+from os.path import sep
 from typing import (
     Dict,
     Optional
@@ -156,7 +157,8 @@ def n_to_n_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[in
 
 
 def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit: Optional[int] = None,
-                              load_videos: bool = False, grayscale: bool = False) -> np.ndarray:
+                              load_videos: bool = False, defects: Optional[list[str]] = None,
+                              grayscale: bool = False) -> np.ndarray:
     """
     Loading function for when every frame has an associated label
     Args:
@@ -182,6 +184,9 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit:
     nb_labels = len(labels)
     data = []
     for i, label in enumerate(labels, start=1):
+        if defects and not any(defect in label["file_path"].split(sep) for defect in defects):
+            continue
+
         sample_base_path = data_path / label["file_path"]
         msg = f"Loading data {str(sample_base_path)}    ({i}/{nb_labels})"
         print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")

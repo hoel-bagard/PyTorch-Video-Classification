@@ -17,7 +17,8 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
 
     def __init__(self, data_path: str, label_map: Dict[int, str], n_to_n: bool, sequence_length: int,
                  grayscale: bool, image_sizes: Tuple[int, int],
-                 transform: Optional[type] = None, limit: Optional[int] = None, load_data: bool = True):
+                 transform: Optional[type] = None, limit: Optional[int] = None, defects: Optional[list[str]] = None,
+                 load_data: bool = True):
         """
         Args:
             data_path:
@@ -31,6 +32,7 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
             transform (callable, optional): Optional transform to be applied on a sample.
             limit (int, optional): If given then the number of elements for each class in the dataset
                                    will be capped to this number
+            defects: Filters given defects (for exemple: ["g1000", "s1000"])
             load_data: If True then all the videos are loaded into ram
         """
         self.transform = transform
@@ -43,7 +45,7 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
 
         assert n_to_n, "N to 1 mode is not yet suported is loading from images"
         self.data = n_to_n_loader_from_images(data_path, label_map,
-                                              limit=limit, load_videos=load_data, grayscale=grayscale)
+                                              limit=limit, defects=defects, load_videos=load_data, grayscale=grayscale)
 
     def __len__(self):
         return len(self.data)

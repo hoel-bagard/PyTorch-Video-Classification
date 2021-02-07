@@ -19,6 +19,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", "-l", default=None, type=int, help="Limits the number of apparition of each class")
     parser.add_argument("--load_data", "-ld", action="store_true", help="Loads all the videos into RAM")
+    parser.add_argument("--defect", "-d", nargs='*', default=None, type=str,
+                        help="Filters given defects (for exemple: 'g1000'), only usable for images.")
     args = parser.parse_args()
 
     if not DataConfig.KEEP_TB:
@@ -55,12 +57,12 @@ def main():
     train_dataloader = VideoDataloader(DataConfig.DATA_PATH / "Train", DataConfig.DALI, DataConfig.LOAD_FROM_IMAGES,
                                        DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
                                        num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
-                                       limit=args.limit, **get_model_config_dict())
+                                       limit=args.limit, defects=args.defects, **get_model_config_dict())
 
     val_dataloader = VideoDataloader(DataConfig.DATA_PATH / "Validation", DataConfig.DALI, DataConfig.LOAD_FROM_IMAGES,
                                      DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
                                      num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
-                                     limit=args.limit, **get_model_config_dict())
+                                     limit=args.limit, defects=args.defects, **get_model_config_dict())
 
     print(f"Loaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
     print("Building model. . .", end="\r")
