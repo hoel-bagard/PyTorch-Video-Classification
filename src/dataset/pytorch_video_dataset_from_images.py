@@ -46,6 +46,9 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
         assert n_to_n, "N to 1 mode is not yet suported is loading from images"
         self.data = n_to_n_loader_from_images(data_path, label_map,
                                               limit=limit, defects=defects, load_videos=load_data, grayscale=grayscale)
+        if n_to_n:
+            for i in range(len(self.data)):
+                self.data[i, 1] = np.amax(self.data[i, 1])
 
     def __len__(self):
         return len(self.data)
@@ -62,7 +65,10 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
             video = [cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
                      for image_path in self.data[i, 0, start:start+self.sequence_length]]
 
-        label = self.data[i, 1][start:start+self.sequence_length].astype(np.uint8)
+        if self.n_to_n:
+            label = self.data[i, 1][start:start+self.sequence_length].astype(np.uint8)
+        else:
+            label = self.data[i, 1].astype(np.uint8)
 
         sample = {"data": np.asarray(video, dtype=np.uint8), "label": label}
 

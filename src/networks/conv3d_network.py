@@ -83,10 +83,6 @@ class Conv3DNet(nn.Module):
         x = self.net_3D(x)
         x = self.conv3D_to_dense(x)
 
-        if self.n_to_n:
-            x = torch.flatten(x, start_dim=2)
-            x = self.dense(x)
-        else:
-            x = torch.flatten(x, start_dim=1)
-            x = self.dense(x)
+        x = torch.flatten(x, start_dim=2 if self.n_to_n else 1)
+        x = self.dense(x)
         return x
