@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", "-l", default=None, type=int, help="Limits the number of apparition of each class")
     parser.add_argument("--load_data", "-ld", action="store_true", help="Loads all the videos into RAM")
-    parser.add_argument("--defect", "-d", nargs='*', default=None, type=str,
+    parser.add_argument("--defects", "-d", nargs='*', default=None, type=str,
                         help="Filters given defects (for exemple: 'g1000'), only usable for images.")
     args = parser.parse_args()
 

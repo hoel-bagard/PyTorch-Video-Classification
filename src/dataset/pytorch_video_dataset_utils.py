@@ -203,7 +203,7 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit:
                           for image_path in image_paths], label])
         else:
             data.append([image_paths, label])
-        if limit and i == limit:
+        if limit and len(data) >= limit:
             break
 
     data = np.asarray(data, dtype=object)
