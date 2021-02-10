@@ -18,7 +18,7 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
     if ModelConfig.N_TO_N:
         loss_fn = CE_Loss()
     else:
-        loss_fn = nn.CrossEntropyLoss()  # nn.NLLLoss()
+        loss_fn = nn.CrossEntropyLoss()
 
     on_epoch_begin = model.reset_lstm_state if model.__class__.__name__ == "LRCN" else None
 

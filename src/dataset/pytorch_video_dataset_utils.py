@@ -10,6 +10,8 @@ from typing import (
 import numpy as np
 import cv2
 
+from src.torch_utils.utils.misc import clean_print
+
 
 def n_to_1_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[int] = None,
                   load_videos: bool = False, grayscale: bool = True) -> np.ndarray:
@@ -32,8 +34,7 @@ def n_to_1_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[in
         video_paths = []
         [video_paths.extend(list(pathname.glob("**" / ext))) for ext in file_types]
         for i, video_path in enumerate(video_paths):
-            msg = f"Loading data {str(video_path)}    ({i}/{len(video_paths)}) for class {label_map[key]}"
-            print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
+            clean_print(f"Loading data {str(video_path)}    ({i}/{len(video_paths)}) for class {label_map[key]}")
             if load_videos:
                 cap = cv2.VideoCapture(video_path)
                 video = []
@@ -122,8 +123,7 @@ def n_to_n_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[in
     data = []
     for i, label in enumerate(labels, start=1):
         video_path = data_path / label["file_path"]
-        msg = f"Loading data {str(video_path)}    ({i}/{nb_labels})"
-        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
+        clean_print(f"Loading data {str(video_path)}    ({i}/{nb_labels})")
 
         assert video_path.is_file(), f"Video {video_path} is missing"
         cap = cv2.VideoCapture(video_path)
@@ -156,9 +156,9 @@ def n_to_n_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[in
     return data
 
 
-def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit: Optional[int] = None,
-                              load_videos: bool = False, defects: Optional[list[str]] = None,
-                              grayscale: bool = False) -> np.ndarray:
+def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequence_length: int,
+                              limit: Optional[int] = None, load_videos: bool = False,
+                              filters: Optional[list[str]] = None, grayscale: bool = False) -> np.ndarray:
     """
     Loading function for when every frame has an associated label
     Args:
@@ -166,9 +166,11 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit:
                    This folder is expected to contain subfolders for each class, with the videos inside.
                    It should also contain a label.json file with the labels (file paths and time stamps)
         label_map: dictionarry mapping an int to a class
+        sequence_length: Length of the sequences fed to the network
         limit (int, optional): If given then the number of elements for each class in the dataset
                             will be capped to this number
         load_videos: If true then this function returns the videos instead of their paths
+        filters: Filters data whose path include the given filters (for exemple: ["subfolder1", "class2"])
         grayscale: If set to true and using the load_videos option, images will be converted to grayscale
     Return:
         numpy array containing the paths/videos and the associated labels
@@ -184,12 +186,11 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit:
     nb_labels = len(labels)
     data = []
     for i, label in enumerate(labels, start=1):
-        if defects and not any(defect in label["file_path"].split(sep) for defect in defects):
+        if filters and not any(f in label["file_path"].split(sep) for f in filters):
             continue
 
         sample_base_path = data_path / label["file_path"]
-        msg = f"Loading data {str(sample_base_path)}    ({i}/{nb_labels})"
-        print(msg + ' ' * (shutil.get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
+        clean_print(f"Loading data {str(sample_base_path)}    ({i}/{nb_labels})")
 
         image_paths = list(sample_base_path.glob("*.jpg"))
         image_paths = sorted([str(image_path) for image_path in image_paths])
@@ -198,13 +199,16 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], limit:
 
         label = read_n_to_n_label(label, label_map, len(image_paths))
 
-        if load_videos:
-            data.append([[cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-                          for image_path in image_paths], label])
-        else:
-            data.append([image_paths, label])
-        if limit and len(data) >= limit:
-            break
+        for start_index in range(0, len(label)-sequence_length):
+            if load_videos:
+                data.append([[cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+                            for image_path in image_paths[start_index, start_index+sequence_length]],
+                             label[start_index, start_index+sequence_length]])
+            else:
+                data.append([image_paths[start_index, start_index+sequence_length],
+                             label[start_index, start_index+sequence_length]])
+            if limit and len(data) >= limit:
+                break
 
     data = np.asarray(data, dtype=object)
     return data

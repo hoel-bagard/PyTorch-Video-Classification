@@ -19,8 +19,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", "-l", default=None, type=int, help="Limits the number of apparition of each class")
     parser.add_argument("--load_data", "-ld", action="store_true", help="Loads all the videos into RAM")
-    parser.add_argument("--defects", "-d", nargs='*', default=None, type=str,
-                        help="Filters given defects (for exemple: 'g1000'), only usable for images.")
+    parser.add_argument("--filters", "-f", nargs='*', default=None, type=str,
+                        help="Filters data (for exemple: 'subfolder1'), only usable for images.")
     args = parser.parse_args()
 
     if not DataConfig.KEEP_TB:
@@ -41,28 +41,27 @@ def main():
             return -1
 
         # Makes a copy of all the code (and config) so that the checkpoints are easy to load and use
-        output_folder = DataConfig.CHECKPOINT_DIR / "Classification-PyTorch"
+        output_folder = DataConfig.CHECKPOINT_DIR / "PyTorch-Video-Classification"
         for filepath in list(Path(".").glob("**/*.py")):
             destination_path = output_folder / filepath
             destination_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(filepath, destination_path)
-        # shutil.copytree(".git", output_folder / ".git")
         misc_files = ["README.md", "requirements.txt", "setup.cfg", ".gitignore"]
         for misc_file in misc_files:
             shutil.copy(misc_file, output_folder / misc_file)
         print("Finished copying files")
 
-    torch.backends.cudnn.benchmark = True   # Makes training quite a bit faster
+    torch.backends.cudnn.benchmark = True   # Makes training a bit faster
 
     train_dataloader = VideoDataloader(DataConfig.DATA_PATH / "Train", DataConfig.DALI, DataConfig.LOAD_FROM_IMAGES,
                                        DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
                                        num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
-                                       limit=args.limit, defects=args.defects, **get_model_config_dict())
+                                       limit=args.limit, filters=args.filters, **get_model_config_dict())
 
     val_dataloader = VideoDataloader(DataConfig.DATA_PATH / "Validation", DataConfig.DALI, DataConfig.LOAD_FROM_IMAGES,
                                      DataConfig.LABEL_MAP, drop_last=ModelConfig.MODEL.__name__ == "LRCN",
                                      num_workers=DataConfig.NUM_WORKERS, dali_device_id=DataConfig.DALI_DEVICE_ID,
-                                     limit=args.limit, defects=args.defects, **get_model_config_dict())
+                                     limit=args.limit, filters=args.filters, **get_model_config_dict())
 
     print(f"Loaded {len(train_dataloader)} train data and", f"{len(val_dataloader)} validation data", flush=True)
     print("Building model. . .", end="\r")
