@@ -9,12 +9,14 @@ from src.torch_utils.networks.cnn_feature_extractor import (
 from .lrcn_network import LRCN
 from .transformer_network import Transformer
 from .conv3d_network import Conv3DNet
+from .cnn_wrapper import CNN_Wrapper
 
 
 class ModelHelper:
     LRCN = LRCN
     Transformer = Transformer
     Conv3DNet = Conv3DNet
+    CNN_Wrapper = CNN_Wrapper
 
 
 class FeatureExtractorHelper:

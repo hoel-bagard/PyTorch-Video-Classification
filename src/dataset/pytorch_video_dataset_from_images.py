@@ -43,7 +43,6 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
         self.grayscale = grayscale
         self.image_sizes = image_sizes
 
-        # assert n_to_n, "N to 1 mode is not yet suported is loading from images"
         self.data = n_to_n_loader_from_images(data_path, label_map,
                                               limit=limit, defects=defects, load_videos=load_data, grayscale=grayscale)
 
