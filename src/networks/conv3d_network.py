@@ -10,8 +10,8 @@ import torch
 import torch.nn as nn
 
 from src.torch_utils.networks.network_utils import (
-    layer_init,
-    get_cnn_output_size
+    layer_init
+    # get_cnn_output_size
 )
 from src.torch_utils.networks.layers import (
     Conv3D,
@@ -21,8 +21,10 @@ from src.torch_utils.networks.layers import (
 
 class Conv3DNet(nn.Module):
     def __init__(self, feature_extractor: nn.Module, conv3d_channels: List[int],
-                 conv3d_kernels: List[Union[int, Tuple[int, int, int]]], conv3d_strides: List[Union[int, Tuple[int, int, int]]],
-                 conv3d_padding: List[Union[int, Tuple[int, int, int]]], output_classes: int, n_to_n: bool, sequence_length: int,
+                 conv3d_kernels: List[Union[int, Tuple[int, int, int]]],
+                 conv3d_strides: List[Union[int, Tuple[int, int, int]]],
+                 conv3d_padding: List[Union[int, Tuple[int, int, int]]],
+                 output_classes: int, n_to_n: bool, sequence_length: int,
                  layer_init: Callable[[nn.Module], None] = layer_init, **kwargs):
         """
         CNN feature extractor followed by a few 3D convolutions

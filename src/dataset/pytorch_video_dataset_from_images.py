@@ -1,4 +1,3 @@
-import random
 from typing import (
     Dict,
     Optional,
@@ -57,7 +56,8 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
         if self.load_data:
             video = np.asarray(self.data[i], dtype=np.uint8)
         else:
-            video = np.asarray([cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB) for image_path in self.data[i]], dtype=np.uint8)
+            video = np.asarray([cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+                                for image_path in self.data[i]], dtype=np.uint8)
 
         label = self.labels[i]
         if not self.n_to_n:

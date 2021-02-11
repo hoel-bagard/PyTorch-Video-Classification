@@ -7,8 +7,8 @@ import torch.nn as nn
 
 from src.torch_utils.networks.transformer_layer import TransformerLayer
 from src.torch_utils.networks.network_utils import (
-    layer_init,
-    get_cnn_output_size
+    layer_init
+    # get_cnn_output_size
 )
 
 

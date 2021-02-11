@@ -158,7 +158,8 @@ def n_to_n_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[in
 
 def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequence_length: int,
                               limit: Optional[int] = None, load_videos: bool = False,
-                              filters: Optional[list[str]] = None, grayscale: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+                              filters: Optional[list[str]] = None,
+                              grayscale: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Loading function for when every frame has an associated label
     Args:
@@ -203,7 +204,7 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequen
         for start_index in range(0, len(label)-sequence_length):
             if load_videos:
                 dataset_data.append([cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-                                       for image_path in image_paths[start_index:start_index+sequence_length]])
+                                     for image_path in image_paths[start_index:start_index+sequence_length]])
             else:
                 dataset_data.append(image_paths[start_index:start_index+sequence_length])
             dataset_labels.append(label[start_index:start_index+sequence_length])
@@ -212,6 +213,5 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequen
                 break
         if limit and len(dataset_labels) >= limit:
             break
-
 
     return dataset_data, dataset_labels

@@ -84,7 +84,7 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                         if epoch % (3*DataConfig.VAL_FREQ) == 0:
                             tensorboard.write_videos(epoch, train_dataloader,
                                                      preprocess_fn=preprocess_fn, postprocess_fn=postprocess_fn)
-                        train_acc = tensorboard.write_metrics(epoch)
+                        train_acc = tensorboard.write_metrics(epoch, write_defect_acc=True)
 
                         # Metrics for the Validation dataset
                         tensorboard.write_images(epoch, val_dataloader, mode="Validation", input_is_video=True,
@@ -92,7 +92,7 @@ def train(model: nn.Module, train_dataloader: torch.utils.data.DataLoader, val_d
                         if epoch % (3*DataConfig.VAL_FREQ) == 0:
                             tensorboard.write_videos(epoch, val_dataloader, mode="Validation",
                                                      preprocess_fn=preprocess_fn, postprocess_fn=postprocess_fn)
-                        val_acc = tensorboard.write_metrics(epoch, mode="Validation")
+                        val_acc = tensorboard.write_metrics(epoch, mode="Validation", write_defect_acc=True)
 
                         print(f"Train accuracy: {train_acc:.3f}  -  Validation accuracy: {val_acc:.3f}",
                               end='\r', flush=True)
