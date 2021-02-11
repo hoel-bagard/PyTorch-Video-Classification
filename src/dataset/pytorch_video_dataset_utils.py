@@ -1,10 +1,10 @@
 import json
 from pathlib import Path
-import shutil
 from os.path import sep
 from typing import (
     Dict,
-    Optional
+    Optional,
+    Tuple
 )
 
 import numpy as np
@@ -158,7 +158,7 @@ def n_to_n_loader(data_path: Path, label_map: Dict[int, str], limit: Optional[in
 
 def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequence_length: int,
                               limit: Optional[int] = None, load_videos: bool = False,
-                              filters: Optional[list[str]] = None, grayscale: bool = False) -> np.ndarray:
+                              filters: Optional[list[str]] = None, grayscale: bool = False) -> Tuple[np.ndarray, np.ndarray]:
     """
     Loading function for when every frame has an associated label
     Args:
@@ -184,13 +184,14 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequen
         labels = json_labels["entries"]
 
     nb_labels = len(labels)
-    data = []
+    dataset_data = []
+    dataset_labels = []
     for i, label in enumerate(labels, start=1):
         if filters and not any(f in label["file_path"].split(sep) for f in filters):
             continue
 
         sample_base_path = data_path / label["file_path"]
-        clean_print(f"Loading data {str(sample_base_path)}    ({i}/{nb_labels})")
+        clean_print(f"Loading data {str(sample_base_path)}    ({i}/{nb_labels})", end="\r")
 
         image_paths = list(sample_base_path.glob("*.jpg"))
         image_paths = sorted([str(image_path) for image_path in image_paths])
@@ -201,14 +202,16 @@ def n_to_n_loader_from_images(data_path: Path, label_map: Dict[int, str], sequen
 
         for start_index in range(0, len(label)-sequence_length):
             if load_videos:
-                data.append([[cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
-                            for image_path in image_paths[start_index, start_index+sequence_length]],
-                             label[start_index, start_index+sequence_length]])
+                dataset_data.append([cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
+                                       for image_path in image_paths[start_index:start_index+sequence_length]])
             else:
-                data.append([image_paths[start_index, start_index+sequence_length],
-                             label[start_index, start_index+sequence_length]])
-            if limit and len(data) >= limit:
-                break
+                dataset_data.append(image_paths[start_index:start_index+sequence_length])
+            dataset_labels.append(label[start_index:start_index+sequence_length])
 
-    data = np.asarray(data, dtype=object)
-    return data
+            if limit and len(dataset_labels) >= limit:
+                break
+        if limit and len(dataset_labels) >= limit:
+            break
+
+
+    return dataset_data, dataset_labels

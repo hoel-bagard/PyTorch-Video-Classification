@@ -43,8 +43,9 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
         self.grayscale = grayscale
         self.image_sizes = image_sizes
 
-        self.data = n_to_n_loader_from_images(data_path, label_map, sequence_length,
-                                              limit=limit, filters=filters, load_videos=load_data, grayscale=grayscale)
+        self.data, self.labels = n_to_n_loader_from_images(data_path, label_map, sequence_length,
+                                                           limit=limit, filters=filters, load_videos=load_data,
+                                                           grayscale=grayscale)
 
     def __len__(self):
         return len(self.data)
@@ -54,15 +55,15 @@ class PytorchVideoDatasetFromImages(torch.utils.data.Dataset):
             i = i.tolist()
 
         if self.load_data:
-            video = self.data[i, 0].astype(np.uint8)
+            video = np.asarray(self.data[i], dtype=np.uint8)
         else:
-            video = [cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB) for image_path in self.data[i, 0]]
+            video = np.asarray([cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB) for image_path in self.data[i]], dtype=np.uint8)
 
-        label = self.data[i, 1].astype(np.uint8)
+        label = self.labels[i]
         if not self.n_to_n:
             label = label = np.amax(label)
 
-        sample = {"data": np.asarray(video, dtype=np.uint8), "label": label}
+        sample = {"data": video, "label": label}
 
         if self.transform:
             sample = self.transform(sample)
