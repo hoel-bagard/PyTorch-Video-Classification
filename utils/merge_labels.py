@@ -17,7 +17,7 @@ def main():
     args.output_path.mkdir(parents=True, exist_ok=True)
 
     files = list(args.input_path.glob("*.json"))
-    nb_files = len(list(files))
+    nb_files = len(files)
 
     class_dict: Dict = {
         'g': "glass",

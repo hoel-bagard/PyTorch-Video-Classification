@@ -1,8 +1,12 @@
-import argparse
+from argparse import ArgumentParser
 import os
-import pathlib
+from pathlib import (
+    Path,
+    PureWindowsPath
+)
 import glob
 import json
+from shutil import get_terminal_size
 
 import cv2
 import numpy as np
@@ -54,6 +58,40 @@ def check_entry(entries, video_path):
         if entry["file_path"] == video_path:
             return True
     return False
+
+
+def merge_folder(entries: list, folder_path: Path) -> list:
+    """
+    Reads all the jsons in the given folder and add their labels to the given entries.
+    Args:
+        entries: List of labels.
+        video_path: Path to a folder with json labels
+    Returns: Input list merged with the labels in folder_path
+    """
+    json_files = list(folder_path.glob("*.json"))
+    nb_files = len(json_files)
+
+    for file_index, file_path in enumerate(json_files, start=1):
+        msg = f"Processing file {file_path},   ({file_index}/{nb_files})"
+        print(msg + ' ' * (get_terminal_size(fallback=(156, 38)).columns - len(msg)), end="\r")
+
+        with open(file_path) as json_file:
+            json_data = json.load(json_file)
+            new_entries = json_data["entries"]
+
+        # TODO: use sets to remove duplicates instead of double for loops ?
+        for new_entry in new_entries:
+            # Removes part of the path that might not be the same (even if files are actually the same)
+            file_path: str = new_entry["file_path"].split(sep=os.path.sep)[-4:]   # TODO: check that it is indeed -4
+            for old_entry in entries:
+                new_file_path = old_entry["file_path"].split(sep=os.path.sep)[-4:]
+                if new_file_path == file_path:
+                    found = True
+                    break
+            if not found:
+                entries.append(new_entry)
+    entries.sort(key=lambda x: x["file_path"])
+    return entries
 
 
 def make_video_timestamps(video_path):
@@ -114,17 +152,21 @@ def make_video_timestamps(video_path):
 
 
 def main():
-    parser = argparse.ArgumentParser("Tool to help label videos frame by frame")
+    parser = ArgumentParser("Tool to help label videos frame by frame")
     parser.add_argument("data_path", help='Path to the dataset')
     parser.add_argument("--defect", "-d", default=None, type=str,
                         help='If you wish to label one defect in particular (for exemple: "g1000")')
-    parser.add_argument("--output_path", "--o", default=None, type=str,
+    parser.add_argument("--output_path", "--o", default=None, type=Path,
                         help='Path to where the label file will be created')
+    parser.add_argument("--merge_folder", "--m", default=None, type=Path,
+                        help="Path to a folder with older label files that should be merged")
     args = parser.parse_args()
 
-    output_path = args.output_path if args.output_path else os.path.join(args.data_path, "labels.json")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    if os.path.isfile(output_path):
+    output_path: Path = args.output_path if args.output_path else args.data_path / "labels.json"
+    assert not output_path.exists(), f"There is already a label file at {str(output_path)}"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if output_path.is_file():
         replace = query_yes_no(f"Labels already exists at {output_path}, do you wish to add new entries to it ?")
         if not replace:
             print("Please give a different output path or delete existing file")
@@ -138,11 +180,15 @@ def main():
         existing_data = {"entries": []}
         entries = existing_data["entries"]
 
+    # If given a folder with json labels, add all of their entries to the current json
+    if args.merge_folder:
+        entries = merge_folder(entries, args.merge_folder)
+
     file_list = glob.glob(os.path.join(args.data_path, "**", "*.mp4"), recursive=True)  # used to be .avi
     nb_videos: int = len(file_list)
     for i, video_path in enumerate(file_list):
         video_subpath = os.path.join(*video_path.split(os.path.sep)[-5:])  # Keeps only the "constant" part
-        video_subpath = pathlib.PureWindowsPath(video_subpath).as_posix()  # Just in case the labeller is using Windows
+        video_subpath = PureWindowsPath(video_subpath).as_posix()  # Just in case the labeller is using Windows
 
         # When labelling only one type of defect, skip the other ones
         if args.defect and args.defect not in video_path:
